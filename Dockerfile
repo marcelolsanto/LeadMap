@@ -7,7 +7,8 @@ WORKDIR /app
 # Variáveis de ambiente
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DISPLAY=:99
+    DISPLAY=:99 \
+    LOG_FILE=/app/logs/erros_robo.log
 
 # Instala dependências do sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -27,7 +28,7 @@ RUN playwright install-deps chromium
 COPY . .
 
 # Garante existência dos diretórios de persistência
-RUN mkdir -p data/backups_usuarios data/usuarios perfil_chrome
+RUN mkdir -p data/backups_usuarios data/usuarios perfil_chrome logs
 
 # Expõe portas: 8501 (Streamlit UI) e 8502 (Stripe Webhook Server)
 EXPOSE 8501 8502

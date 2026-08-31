@@ -11,10 +11,11 @@ services:
       # Persiste perfil de navegacao (cookies e sessoes do Maps)
       - ./perfil_chrome:/app/perfil_chrome
       # Persiste logs de execucao
-      - ./erros_robo.log:/app/erros_robo.log
+      - ./logs:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - LOG_LEVEL=INFO
+      - LOG_FILE=/app/logs/erros_robo.log
     env_file:
       - .env
     restart: unless-stopped
