@@ -9,6 +9,7 @@ jobs:
   test:
     name: Run Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,6 +32,7 @@ jobs:
     name: Deploy to Homeserver Container
     needs: test
     runs-on: self-hosted
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,13 +50,16 @@ jobs:
             fi
           fi
 
-          # Tenta docker compose v2, se nao usa docker-compose v1
+          echo "Baixando imagem base do Playwright..."
+          docker pull mcr.microsoft.com/playwright/python:v1.40.0-jammy || true
+
+          echo "Construindo e iniciando container com Docker Compose..."
           if docker compose version >/dev/null 2>&1; then
             docker compose up -d --build
           elif docker-compose version >/dev/null 2>&1; then
             docker-compose up -d --build
           else
-            echo "Docker nao encontrado no PATH do runner. Verifique permissões."
+            echo "Docker Compose nao encontrado no PATH."
             exit 1
           fi
 
