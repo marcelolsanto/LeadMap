@@ -10,7 +10,10 @@ import random
 import re
 import requests
 from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
+try:
+    from duckduckgo_search import DDGS
+except ImportError:
+    DDGS = None
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib3.exceptions import InsecureRequestWarning
@@ -151,21 +154,22 @@ class WorkerC3PO(threading.Thread):
             if self.callback:
                 self.callback(f"   Rede Social detectada. Analisando via DDGS...")
             try:
-                query = f'"{url}"'
-                with DDGS() as ddgs:
-                    resultados = list(ddgs.text(query, max_results=3))
-                    if resultados:
-                        texto = " ".join([r.get('body', '') for r in resultados])
-                        self.extrair_contatos_html(texto, lead)
-                        links_bio = re.findall(r"(https?://[^\s]+)", texto)
-                        for link in links_bio:
-                            link_clean = link.split(')')[0].split('"')[0]
-                            if not any(d in link_clean for d in dominios_sociais):
-                                if self.callback:
-                                    self.callback(f"   Mergulhando no link da Bio: {link_clean}")
-                                lead["Site"] = link_clean
-                                self.processar_url(link_clean, lead, profundidade + 1)
-                                break
+                if DDGS:
+                    query = f'"{url}"'
+                    with DDGS() as ddgs:
+                        resultados = list(ddgs.text(query, max_results=3))
+                        if resultados:
+                            texto = " ".join([r.get('body', '') for r in resultados])
+                            self.extrair_contatos_html(texto, lead)
+                            links_bio = re.findall(r"(https?://[^\s]+)", texto)
+                            for link in links_bio:
+                                link_clean = link.split(')')[0].split('"')[0]
+                                if not any(d in link_clean for d in dominios_sociais):
+                                    if self.callback:
+                                        self.callback(f"   Mergulhando no link da Bio: {link_clean}")
+                                    lead["Site"] = link_clean
+                                    self.processar_url(link_clean, lead, profundidade + 1)
+                                    break
             except Exception as e:
                 logger.debug(f"Erro DDGS para {url}: {e}")
             return
@@ -226,18 +230,19 @@ class WorkerC3PO(threading.Thread):
                     if self.callback:
                         self.callback(f"   Sem site. Procurando redes sociais via DDGS...")
                     try:
-                        time.sleep(random.uniform(1.5, 3.0))
-                        query = f'"{empresa}" "{cidade}" site:instagram.com OR site:facebook.com'
-                        with DDGS() as ddgs:
-                            resultados = list(ddgs.text(query, max_results=3))
-                            for res in resultados:
-                                href = res.get('href', '')
-                                if 'instagram.com' in href or 'facebook.com' in href:
-                                    url = href
-                                    lead["Site"] = url
-                                    if self.callback:
-                                        self.callback(f"   Rede Social encontrada: {url}")
-                                    break
+                        if DDGS:
+                            time.sleep(random.uniform(1.5, 3.0))
+                            query = f'"{empresa}" "{cidade}" site:instagram.com OR site:facebook.com'
+                            with DDGS() as ddgs:
+                                resultados = list(ddgs.text(query, max_results=3))
+                                for res in resultados:
+                                    href = res.get('href', '')
+                                    if 'instagram.com' in href or 'facebook.com' in href:
+                                        url = href
+                                        lead["Site"] = url
+                                        if self.callback:
+                                            self.callback(f"   Rede Social encontrada: {url}")
+                                        break
                     except Exception as e:
                         logger.debug(f"Erro DDGS busca social para {empresa}: {e}")
 

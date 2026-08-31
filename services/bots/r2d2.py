@@ -8,7 +8,10 @@ import queue
 import re
 import time
 import random
-from duckduckgo_search import DDGS
+try:
+    from duckduckgo_search import DDGS
+except ImportError:
+    DDGS = None
 from services import enrichment_service
 from utils.logger import get_logger
 
@@ -56,13 +59,14 @@ class WorkerR2D2(threading.Thread):
         padrao = r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}'
 
         try:
-            with DDGS() as ddgs:
-                resultados = list(ddgs.text(query, max_results=3))
-                for res in resultados:
-                    texto_resultado = res.get('body', '') + " " + res.get('title', '')
-                    match = re.search(padrao, texto_resultado)
-                    if match:
-                        return match.group(0)
+            if DDGS:
+                with DDGS() as ddgs:
+                    resultados = list(ddgs.text(query, max_results=3))
+                    for res in resultados:
+                        texto_resultado = res.get('body', '') + " " + res.get('title', '')
+                        match = re.search(padrao, texto_resultado)
+                        if match:
+                            return match.group(0)
         except Exception as e:
             logger.warning(f"Erro DDGS ao buscar CNPJ de '{nome_empresa}': {e}")
 
