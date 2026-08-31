@@ -3,6 +3,7 @@ name: CI/CD LeadMap Homeserver
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -34,7 +35,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy with Docker Compose
+      - name: Prepare Environment and Deploy
         run: |
-          docker compose up -d --build
+          # Garante que o arquivo .env existe para o docker-compose
+          if [ ! -f .env ]; then
+            if [ -f /home/$USER/Documentos/PycharmProjects/LeadMap/.env ]; then
+              cp /home/$USER/Documentos/PycharmProjects/LeadMap/.env .env
+            elif [ -f .env.example ]; then
+              cp .env.example .env
+            else
+              touch .env
+            fi
+          fi
+
+          # Tenta docker compose v2, se nao usa docker-compose v1
+          if docker compose version >/dev/null 2>&1; then
+            docker compose up -d --build
+          elif docker-compose version >/dev/null 2>&1; then
+            docker-compose up -d --build
+          else
+            echo "Docker nao encontrado no PATH do runner. Verifique permissões."
+            exit 1
+          fi
+
           echo "LeadMap Pro atualizado e rodando no Homeserver com sucesso!"
