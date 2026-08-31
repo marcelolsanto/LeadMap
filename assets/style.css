@@ -1,0 +1,159 @@
+/* =========================================
+   1. CONFIGURAÇÕES GERAIS E STREAMLIT
+   ========================================= */
+[data-testid="stSidebar"] { display: none; }
+#MainMenu { visibility: hidden; }
+footer { visibility: hidden; }
+header { visibility: hidden; }
+
+/* Container Principal */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 5rem;
+    max-width: 900px;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    margin: 0 auto;
+}
+
+/* =========================================
+   2. COMPONENTES DO SISTEMA
+   ========================================= */
+/* Console do Robô */
+.terminal-window {
+    background-color: #0d1117;
+    color: #3fb950;
+    font-family: 'Consolas', monospace;
+    padding: 15px;
+    border-radius: 12px;
+    height: 350px;
+    overflow-y: auto;
+    margin-bottom: 25px;
+    border: 1px solid #30363d;
+}
+.log-line {
+    border-bottom: 1px solid #21262d;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+/* Cards de Resultado */
+div.lead-card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 16px;
+    margin-bottom: 15px;
+    border-left: 6px solid #2563eb;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    align-content: flex-start;
+}
+div.lead-card:hover {
+    transform: translateY(-5px);
+    border-left: 6px solid #00d4ff;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+.lead-title { font-size: 1.2rem !important; font-weight: 800 !important; color: #1e293b !important; margin-bottom: 5px !important; }
+.lead-row { display: flex; align-items: center; margin-bottom: 6px; color: #475569 !important; font-size: 0.9rem !important; }
+.lead-row a { color: #2563eb !important; font-weight: 700; }
+
+.logout-btn {
+    float: right; font-size: 0.8rem; color: #ef4444;
+    text-decoration: none; border: 1px solid #ef4444;
+    padding: 5px 10px; border-radius: 10px; margin-left: 10px;
+}
+
+/* =========================================
+   3. TELA DE LOGIN & BOTÕES
+   ========================================= */
+.login-container { width: 60%; margin: 0 auto; }
+.google-btn {
+    background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+    color: white !important; font-weight: 800; border: none;
+    border-radius: 12px; padding: 18px 20px; text-decoration: none;
+    display: block; width: 100%; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+    transition: all 0.3s ease; font-size: 1.1rem; text-align: center; cursor: pointer;
+}
+.google-btn:hover { transform: translateY(-3px); background: linear-gradient(90deg, #1d4ed8 0%, #1e40af 100%); }
+
+.comparison-container { display: flex; gap: 20px; margin: 30px 0; background-color: #f8fafc; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; }
+.list-box { flex: 1; }
+.border-divider { border-left: 1px solid #cbd5e1; padding-left: 20px; }
+.list-box ul { list-style: none; padding: 0; margin: 0; }
+.pain_point li { margin-bottom: 8px; font-size: 0.9rem; display: flex; align-items: center; }
+.list-box li { margin-bottom: 8px; font-size: 0.9rem; display: flex; align-items: center; color: #64748b;}
+
+/* =========================================
+   4. NOVO: CENTRALIZAÇÃO DE INPUTS E BOTÕES
+   ========================================= */
+
+/* Centraliza o container do Botão do Streamlit */
+.stButton {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Centraliza o botão em si e dá tamanho fixo para mobile touch */
+.stButton > button {
+    display: block;
+    margin: 0 auto;
+    width: 100%; /* Ocupa a largura da coluna pai */
+    min-height: 45px; /* Altura boa para toque */
+    border-radius: 8px;
+}
+
+.st-emotion-cache-1n6tfoc {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-width: 1rem;
+    flex-flow: column;
+    flex: 1 1 0%;
+    -webkit-box-align: start;
+    align-items: center;
+    -webkit-box-pack: start;
+    justify-content: center;
+    overflow: visible;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: center;
+}
+
+
+/* Ajuste nos Inputs para ficarem mais elegantes */
+div[data-baseweb="input"] {
+    border-radius: 8px;
+    background-color: #f8fafc;
+}
+
+/* ===================================================
+   📱 OTIMIZAÇÃO PARA DISPOSITIVOS MÓVEIS (RESPONSIVO)
+   =================================================== */
+@media (max-width: 768px) {
+    /* Transforma a grelha de 2 colunas numa lista vertical */
+    .grid-comparativo {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+
+    /* Reduz o tamanho do título gigante na tela inicial */
+    h1 {
+        font-size: 1.6rem !important;
+    }
+
+    /* Reduz a margem lateral que espremia o conteúdo */
+    .st-emotion-cache-1kyxreq {
+        padding: 1rem !important;
+    }
+}

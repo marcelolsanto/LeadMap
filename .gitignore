@@ -1,0 +1,52 @@
+# --- SEGURANCA (CRITICO) ---
+.env
+.env.*
+.user_session
+.oauth_state
+client_secret*.json
+credentials.json
+token.json
+secrets.toml
+data/
+projeto_completo_para_ia.txt
+estrutura_projeto.txt
+
+# --- AMBIENTE VIRTUAL E IDE ---
+.venv/
+venv/
+env/
+.idea/
+.vscode/
+*.swp
+
+# --- PYTHON & PYTEST ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# --- PLAYWRIGHT & NAVEGADOR ---
+perfil_chrome/
+test-results/
+playwright-report/
+
+# --- DADOS GERADOS ---
+*.csv
+*.xlsx
+*.vcf
+*.pdf
+*.zip
+*.mp4
+*.m4a
+auditoria_leadmap.csv
+leads.csv
+leadmap_usage.db/
+relatorios_completos/
+
+# --- LOGS E SISTEMA ---
+*.log
+.DS_Store
+Thumbs.db
+
+# --- STREAMLIT ---
+.streamlit/

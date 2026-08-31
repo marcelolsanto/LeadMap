@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  leadmap:
+    build: .
+    container_name: leadmap_pro
+    ports:
+      - "8501:8501"   # Streamlit UI
+      - "8502:8502"   # Stripe Webhook Server
+    volumes:
+      # Persiste bancos SQLite e backups locais
+      - ./data:/app/data
+      # Persiste perfil de navegacao (cookies e sessoes do Maps)
+      - ./perfil_chrome:/app/perfil_chrome
+      # Persiste logs de execucao
+      - ./erros_robo.log:/app/erros_robo.log
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    env_file:
+      - .env
+    restart: unless-stopped
