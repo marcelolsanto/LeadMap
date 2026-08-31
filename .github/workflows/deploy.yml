@@ -53,11 +53,16 @@ jobs:
           echo "Baixando imagem base do Playwright..."
           docker pull mcr.microsoft.com/playwright/python:v1.40.0-jammy || true
 
+          # Remove pasta fantasma que o Docker criou no lugar do arquivo de log
+          rm -rf erros_robo.log || true
+
           echo "Construindo e iniciando container com Docker Compose..."
           if docker compose version >/dev/null 2>&1; then
-            docker compose up -d --build
+            docker compose down || true
+            docker compose up -d --build --force-recreate
           elif docker-compose version >/dev/null 2>&1; then
-            docker-compose up -d --build
+            docker-compose down || true
+            docker-compose up -d --build --force-recreate
           else
             echo "Docker Compose nao encontrado no PATH."
             exit 1

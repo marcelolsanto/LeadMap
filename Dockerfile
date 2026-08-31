@@ -27,8 +27,10 @@ RUN playwright install-deps chromium
 # Copia código do projeto
 COPY . .
 
-# Garante existência dos diretórios de persistência
-RUN mkdir -p data/backups_usuarios data/usuarios perfil_chrome logs
+# Remove pasta fantasma que Docker pode ter criado no lugar do arquivo de log
+# e garante existência dos diretórios de persistência
+RUN rm -rf /app/erros_robo.log && \
+    mkdir -p data/backups_usuarios data/usuarios perfil_chrome logs
 
 # Expõe portas: 8501 (Streamlit UI) e 8502 (Stripe Webhook Server)
 EXPOSE 8501 8502
