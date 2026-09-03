@@ -62,9 +62,44 @@ def _criar_app():
 
         return jsonify({"status": "ok"}), 200
 
+    @app.route("/btg/webhook", methods=["POST"])
+    def btg_webhook():
+        """Webhook para notificações de PIX do BTG Pactual (evento instant-collection.paid)."""
+        try:
+            payload = request.get_json(force=True)
+            logger.info(f"Webhook BTG Pactual recebido: {payload}")
+
+            # O BTG envia o objeto dentro de data ou no corpo direto
+            data_obj = payload.get("data", payload)
+            event_type = payload.get("event") or request.headers.get("X-Btg-Event", "")
+            status = data_obj.get("status", "")
+            tx_id = data_obj.get("txId", "")
+
+            # Evento oficial: instant-collection.paid
+            if status == "PAID" or event_type == "instant-collection.paid":
+                # Tenta recuperar o e-mail atrelado à cobrança (via tags ou displayText)
+                tags = data_obj.get("tags", {})
+                email_comprador = tags.get("email") or tags.get("user") or data_obj.get("displayText")
+
+                if email_comprador and "@" in str(email_comprador):
+                    repository.salvar_assinatura(
+                        email=str(email_comprador).strip().lower(),
+                        status="active",
+                        customer_id="btg_pactual",
+                        subscription_id=tx_id,
+                        valido_ate="vitalicio"
+                    )
+                    logger.info(f"Assinatura ativada via Webhook BTG Pactual para {email_comprador}")
+
+            return jsonify({"status": "received"}), 200
+        except Exception as e:
+            logger.error(f"Erro ao processar Webhook BTG: {e}", exc_info=True)
+            return jsonify({"error": str(e)}), 400
+
     @app.route("/health", methods=["GET"])
     def health():
         return jsonify({"status": "webhook server online"}), 200
+
 
     return app
 

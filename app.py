@@ -27,7 +27,7 @@ st.set_page_config(
 from config import settings
 from modules.fila import GerenciadorFila
 from scraper.core import GoogleMapsScraper
-from services import auth_service, analytics_service, audit_service, queue_service, payment_service
+from services import auth_service, analytics_service, audit_service, queue_service, payment_service, btg_service
 from views import login_view, search_view, results_view, paywall_view
 from services import repository, backup_service, google_contacts
 from utils.logger import get_logger
@@ -120,7 +120,17 @@ def check_auth():
         st.session_state.navegacao = "inicio"
         st.rerun()
 
+    # --- RETORNO DE AUTORIZAÇÃO DA API BTG PACTUAL (OAUTH CODE) ---
+    if st.query_params.get("btg_code"):
+        code_btg = st.query_params.get("btg_code")
+        token_data = btg_service.trocar_codigo_por_token_btg(code_btg)
+        if token_data:
+            st.toast("🎉 Conexão autorizada com sucesso no BTG Pactual!", icon="🏦")
+        st.query_params.clear()
+        st.rerun()
+
     # --- 1. LOGOUT ---
+
     if st.query_params.get("logout"):
         email_saindo = st.session_state.user_info.get('email', 'Desconhecido')
         audit_service.log_console("AUTH", f"👋 Usuario fez Logout: {email_saindo}")

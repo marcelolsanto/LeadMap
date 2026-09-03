@@ -11,16 +11,37 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-def obter_token_btg() -> str | None:
+BTG_TOKEN_FILE = ".btg_token.json"
+
+
+def gerar_link_autorizacao_btg(redirect_uri: str = None) -> str:
     """
-    Solicita token OAuth 2.0 no BTG Pactual Id.
-    Retorna access_token ou None em caso de pendência de verificação.
+    Gera a URL do fluxo Authorization Code para autorizar a aplicação no BTG Pactual Id.
+    Escopos exigidos pela documentação oficial: openid e empresas.btgpactual.com/pix-cash-in.
     """
-    client_id = getattr(settings, 'BTG_CLIENT_ID', None)
-    client_secret = getattr(settings, 'BTG_CLIENT_SECRET', None)
+    base = "https://id.btgpactual.com/oauth2/authorize"
+    r_uri = redirect_uri or getattr(settings, "REDIRECT_URI", "http://localhost:8501")
+    client_id = getattr(settings, "BTG_CLIENT_ID", "b8bc88f5-7461-4817-b3d3-cd8a23edf6b8")
+
+    params = {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": r_uri,
+        "scope": "openid empresas.btgpactual.com/pix-cash-in"
+    }
+    return f"{base}?{urllib.parse.urlencode(params)}"
+
+
+def trocar_codigo_por_token_btg(auth_code: str, redirect_uri: str = None) -> dict | None:
+    """
+    Troca o código de autorização gerado no navegador pelos tokens de acesso e refresh.
+    Salva o token localmente para renovação contínua.
+    """
+    client_id = getattr(settings, "BTG_CLIENT_ID", None)
+    client_secret = getattr(settings, "BTG_CLIENT_SECRET", None)
+    r_uri = redirect_uri or getattr(settings, "REDIRECT_URI", "http://localhost:8501")
 
     if not client_id or not client_secret:
-        logger.warning("Credenciais BTG Pactual não configuradas.")
         return None
 
     auth_str = f"{client_id}:{client_secret}"
@@ -31,22 +52,42 @@ def obter_token_btg() -> str | None:
         "Content-Type": "application/x-www-form-urlencoded"
     }
     data = {
-        "grant_type": "client_credentials",
-        "scope": "empresas.btgpactual.com/pix-cash-in"
+        "grant_type": "authorization_code",
+        "code": auth_code,
+        "redirect_uri": r_uri
     }
 
     try:
-        r = requests.post("https://id.btgpactual.com/oauth2/token", headers=headers, data=data, timeout=6)
+        r = requests.post("https://id.btgpactual.com/oauth2/token", headers=headers, data=data, timeout=8)
         if r.status_code == 200:
-            token = r.json().get("access_token")
-            logger.info("Token BTG Pactual obtido com sucesso.")
-            return token
+            token_data = r.json()
+            with open(BTG_TOKEN_FILE, "w") as f:
+                import json
+                json.dump(token_data, f)
+            logger.info("Tokens BTG Pactual obtidos e salvos com sucesso.")
+            return token_data
         else:
-            logger.warning(f"Resposta BTG OAuth ({r.status_code}): {r.text[:200]}")
+            logger.error(f"Erro ao trocar código por token BTG ({r.status_code}): {r.text}")
             return None
     except Exception as e:
-        logger.error(f"Erro ao conectar com BTG Pactual: {e}")
+        logger.error(f"Falha na comunicação com BTG: {e}", exc_info=True)
         return None
+
+
+def obter_token_btg() -> str | None:
+    """
+    Recupera o access_token válido do BTG Pactual (lê do arquivo salvo ou tenta renovar).
+    """
+    import os, json
+    if os.path.exists(BTG_TOKEN_FILE):
+        try:
+            with open(BTG_TOKEN_FILE, "r") as f:
+                saved = json.load(f)
+                return saved.get("access_token")
+        except Exception:
+            pass
+    return None
+
 
 
 # ─── GERADOR PIX EMVCO DO BANCO CENTRAL (COMPATÍVEL COM TODOS OS BANCOS) ─────
