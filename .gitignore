@@ -50,3 +50,7 @@ Thumbs.db
 
 # --- STREAMLIT ---
 .streamlit/
+
+# --- CI/CD RUNNER & LOGS ---
+actions-runner/
+logs/
