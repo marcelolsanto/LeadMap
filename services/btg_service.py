@@ -27,9 +27,10 @@ def gerar_link_autorizacao_btg(redirect_uri: str = None) -> str:
         "response_type": "code",
         "client_id": client_id,
         "redirect_uri": r_uri,
-        "scope": "openid empresas.btgpactual.com/pix-cash-in"
+        "scope": "openid brn:btg:empresas:payment-link empresas.btgpactual.com/pix-cash-in"
     }
     return f"{base}?{urllib.parse.urlencode(params)}"
+
 
 
 def trocar_codigo_por_token_btg(auth_code: str, redirect_uri: str = None) -> dict | None:

@@ -85,8 +85,12 @@ def render_paywall(user_email: str) -> None:
         </div>
         """, unsafe_allow_html=True)
 
-        if url_mensal and url_mensal != "#":
-            st.link_button("💳 Pagar no Cartão (Stripe)", url=url_mensal, use_container_width=True)
+        btg_link_m = getattr(settings, "BTG_LINK_MONTHLY", "")
+        btn_url_m = btg_link_m if btg_link_m else url_mensal
+        btn_label_m = "💳 Pagar Cartão/Boleto (BTG Pactual)" if btg_link_m else "💳 Pagar no Cartão (Stripe)"
+
+        if btn_url_m and btn_url_m != "#":
+            st.link_button(btn_label_m, url=btn_url_m, use_container_width=True)
 
         with st.popover("⚡ Pagar R$ 30 no PIX (BTG Pactual)", use_container_width=True):
             st.markdown("### ⚡ Pagamento via PIX - R$ 30,00")
@@ -137,8 +141,13 @@ def render_paywall(user_email: str) -> None:
         </div>
         """, unsafe_allow_html=True)
 
-        if url_anual and url_anual != "#":
-            st.link_button("💳 Pagar no Cartão (Stripe)", url=url_anual, type="primary", use_container_width=True)
+        btg_link_a = getattr(settings, "BTG_LINK_YEARLY", "")
+        btn_url_a = btg_link_a if btg_link_a else url_anual
+        btn_label_a = "💳 Pagar Cartão/Boleto (BTG Pactual - 45% OFF)" if btg_link_a else "💳 Pagar no Cartão (Stripe)"
+
+        if btn_url_a and btn_url_a != "#":
+            st.link_button(btn_label_a, url=btn_url_a, type="primary", use_container_width=True)
+
 
         with st.popover("⚡ Pagar R$ 199 no PIX (BTG Pactual)", use_container_width=True):
             st.markdown("### ⚡ Pagamento via PIX - R$ 199,00 (45% OFF)")

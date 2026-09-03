@@ -75,9 +75,16 @@ def _criar_app():
             status = data_obj.get("status", "")
             tx_id = data_obj.get("txId", "")
 
-            # Evento oficial: instant-collection.paid
-            if status == "PAID" or event_type == "instant-collection.paid":
-                # Tenta recuperar o e-mail atrelado à cobrança (via tags ou displayText)
+            # Eventos oficiais BTG: instant-collection.paid (Pix) e payment-link.paid (Cartão/Boleto)
+            if status == "PAID" or event_type in ("instant-collection.paid", "payment-link.paid"):
+                link_id = data_obj.get("id", "")
+                link_url = data_obj.get("linkUrl", "")
+                payer_name = data_obj.get("payer", {}).get("name", "Cliente")
+                amount = data_obj.get("amount") or data_obj.get("paidAmount", 0)
+
+                logger.info(f"PAGAMENTO BTG CONFIRMADO! Evento: {event_type}, ID: {link_id or tx_id}, Valor: R$ {amount}")
+
+                # Tenta recuperar o e-mail atrelado à cobrança (via tags, displayText ou payer)
                 tags = data_obj.get("tags", {})
                 email_comprador = tags.get("email") or tags.get("user") or data_obj.get("displayText")
 
@@ -86,10 +93,13 @@ def _criar_app():
                         email=str(email_comprador).strip().lower(),
                         status="active",
                         customer_id="btg_pactual",
-                        subscription_id=tx_id,
+                        subscription_id=link_id or tx_id or "btg_link",
                         valido_ate="vitalicio"
                     )
                     logger.info(f"Assinatura ativada via Webhook BTG Pactual para {email_comprador}")
+                else:
+                    logger.info(f"Pagamento BTG recebido de '{payer_name}' (Link: {link_url}).")
+
 
             return jsonify({"status": "received"}), 200
         except Exception as e:
