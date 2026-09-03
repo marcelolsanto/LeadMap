@@ -16,6 +16,28 @@ from services import enrichment_service
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
+def _validar_digitos_cnpj(cnpj: str) -> bool:
+    """Valida os digitos verificadores do CNPJ. Retorna True se valido."""
+    nums = [int(c) for c in cnpj if c.isdigit()]
+    if len(nums) != 14:
+        return False
+    # Todos iguais sao invalidos
+    if len(set(nums)) == 1:
+        return False
+    # Calculo do primeiro digito verificador
+    pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    soma = sum(nums[i] * pesos1[i] for i in range(12))
+    resto = soma % 11
+    d1 = 0 if resto < 2 else 11 - resto
+    if nums[12] != d1:
+        return False
+    # Calculo do segundo digito verificador
+    pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    soma = sum(nums[i] * pesos2[i] for i in range(13))
+    resto = soma % 11
+    d2 = 0 if resto < 2 else 11 - resto
+    return nums[13] == d2
+
 
 
 class WorkerR2D2(threading.Thread):
@@ -107,7 +129,7 @@ class WorkerR2D2(threading.Thread):
 
                 if precisa_auditar and cnpj:
                     cnpj_limpo = re.sub(r'[^0-9]', '', str(cnpj)).zfill(14)
-                    if len(cnpj_limpo) == 14:
+                    if len(cnpj_limpo) == 14 and _validar_digitos_cnpj(cnpj_limpo):
                         dados = enrichment_service.consultar_empresa(cnpj_limpo)
                         if dados:
                             self.stats["enriquecidos"] += 1
@@ -148,3 +170,4 @@ class WorkerR2D2(threading.Thread):
 
     def parar(self) -> None:
         self.rodando = False
+

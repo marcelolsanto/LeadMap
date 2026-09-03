@@ -1,7 +1,6 @@
 streamlit
 pandas
 playwright
-playwright-stealth
 openpyxl
 chromium
 python-dotenv

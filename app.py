@@ -50,7 +50,6 @@ iniciar_webhook_server(porta=8502)
 # ==============================================================================
 TIMEOUT_SEGUNDOS = 1800  # 30 minutos
 
-
 def verificar_inatividade():
     if 'last_active' not in st.session_state:
         st.session_state.last_active = time.time()
@@ -109,18 +108,22 @@ def check_auth():
         email_saindo = st.session_state.user_info.get('email', 'Desconhecido')
         audit_service.log_console("AUTH", f"👋 Usuario fez Logout: {email_saindo}")
 
+        token_atual = st.session_state.get("session_token")
         st.session_state.clear()
-        auth_service.limpar_sessao_local()
+        auth_service.limpar_sessao_local(token_atual)
         st.query_params.clear()
         st.rerun()
 
     if st.session_state.logged_in:
         return
 
-    sessao_salva = auth_service.carregar_sessao_local()
+    # Bug 2 FIX: carrega sessão pelo token UUID individual, não por arquivo compartilhado
+    token_salvo = st.session_state.get("session_token")
+    sessao_salva = auth_service.carregar_sessao_local(token_salvo)
     if sessao_salva:
         st.session_state.logged_in = True
         st.session_state.user_info = sessao_salva
+        st.session_state.session_token = sessao_salva.get("_token", token_salvo)
         logger.info(f"Retorno por sessao salva: {sessao_salva.get('email')}")
         st.rerun()
 
@@ -130,6 +133,8 @@ def check_auth():
         if data:
             st.session_state.logged_in = True
             st.session_state.user_info = data
+            # Bug 2 FIX: armazena o token único desta sessão
+            st.session_state.session_token = data.get("session_token")
             logger.info(f"Novo login autenticado: {data.get('email')}")
             st.query_params.clear()
             st.rerun()
@@ -141,6 +146,27 @@ def check_auth():
 
         login_view.render_login(auth_service.gerar_link_login())
         st.stop()
+
+
+def check_payment(email: str) -> None:
+    """
+    Bug 1 FIX: Gate de pagamento — bloqueia acesso de usuários sem assinatura ativa.
+    Admins definidos em ADMIN_EMAILS têm acesso livre (verificado dentro de payment_service).
+    """
+    if payment_service.verificar_status_assinatura(email):
+        return  # OK — tem assinatura ativa ou é admin
+
+    # Usuário sem assinatura — mostra tela de upgrade
+    st.warning("⚠️ Sua assinatura não está ativa. Assine um plano para continuar.")
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        url_mensal = payment_service.criar_sessao_checkout(email, "mensal")
+        st.link_button("💳 Assinar Mensal", url=url_mensal, type="primary", use_container_width=True)
+    with col2:
+        url_anual = payment_service.criar_sessao_checkout(email, "anual")
+        st.link_button("🏆 Assinar Anual (melhor custo)", url=url_anual, use_container_width=True)
+    st.stop()
 
 
 # --- GESTAO DE SESSAO ---
@@ -157,6 +183,7 @@ if qtd_fila > 0:
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "user_info" not in st.session_state: st.session_state.user_info = {}
 if "creds" not in st.session_state: st.session_state.creds = None
+if "session_token" not in st.session_state: st.session_state.session_token = None
 if "navegacao" not in st.session_state: st.session_state.navegacao = "inicio"
 if "status_fila" not in st.session_state: st.session_state.status_fila = "fora"
 if "df_leads" not in st.session_state: st.session_state.df_leads = pd.DataFrame()
@@ -165,6 +192,9 @@ if "nicho_atual" not in st.session_state: st.session_state.nicho_atual = ""
 if "qtd_leads_salvos" not in st.session_state: st.session_state.qtd_leads_salvos = 0
 
 check_auth()
+
+# Bug 1 FIX: gate de pagamento — verifica assinatura antes de renderizar qualquer tela
+check_payment(st.session_state.user_info.get("email", ""))
 
 # --- HEADER ---
 user_email = st.session_state.user_info.get('email', 'Usuario')
@@ -441,6 +471,9 @@ elif st.session_state.navegacao == "execucao":
         fila.sair(st.session_state.session_id)
         st.session_state.status_fila = "fora"
         st.session_state.robos_iniciados = False
+
+        # Bug 3 FIX: libera a sessão do SessionManager para evitar memory leak
+        session_manager.destroy(st.session_state.session_id)
 
         lista_final = p_state.resultados_finais.copy()
 
