@@ -75,14 +75,15 @@ def _criar_app():
             status = data_obj.get("status", "")
             tx_id = data_obj.get("txId", "")
 
-            # Eventos oficiais BTG: instant-collection.paid (Pix) e payment-link.paid (Cartão/Boleto)
-            if status == "PAID" or event_type in ("instant-collection.paid", "payment-link.paid"):
-                link_id = data_obj.get("id", "")
+            # Eventos oficiais BTG: instant-collection.paid (Pix), payment-link.paid (Cartão/Boleto) e payments.confirmed
+            if status in ("PAID", "CONFIRMED") or event_type in ("instant-collection.paid", "payment-link.paid", "payments.confirmed"):
+                link_id = data_obj.get("id") or data_obj.get("paymentId", "")
                 link_url = data_obj.get("linkUrl", "")
-                payer_name = data_obj.get("payer", {}).get("name", "Cliente")
+                payer_name = data_obj.get("payer", {}).get("name") or data_obj.get("debitParty", {}).get("name", "Cliente")
                 amount = data_obj.get("amount") or data_obj.get("paidAmount", 0)
 
-                logger.info(f"PAGAMENTO BTG CONFIRMADO! Evento: {event_type}, ID: {link_id or tx_id}, Valor: R$ {amount}")
+                logger.info(f"PAGAMENTO BTG CONFIRMADO! Evento: {event_type}, ID: {link_id or tx_id}, Status: {status}, Valor: R$ {amount}")
+
 
                 # Tenta recuperar o e-mail atrelado à cobrança (via tags, displayText ou payer)
                 tags = data_obj.get("tags", {})

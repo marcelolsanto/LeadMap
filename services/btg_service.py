@@ -90,6 +90,24 @@ def obter_token_btg() -> str | None:
     return None
 
 
+def obter_headers_autenticados_btg(idempotency_key: str = None) -> dict:
+    """
+    Gera headers autenticados com Bearer Token e x-idempotency-key.
+    Atende à especificação técnica do BTG Pactual para evitar duplicidade de operações por 24h.
+    """
+    import uuid
+    token = obter_token_btg()
+    key = idempotency_key or str(uuid.uuid4())
+    headers = {
+        "x-idempotency-key": key,
+        "Content-Type": "application/json"
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+
 
 # ─── GERADOR PIX EMVCO DO BANCO CENTRAL (COMPATÍVEL COM TODOS OS BANCOS) ─────
 
