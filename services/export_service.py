@@ -2,22 +2,39 @@ from fpdf import FPDF
 from datetime import datetime
 
 
-def gerar_vcf(dataframe):
-    """Gera arquivo VCard para importar no celular manualmente."""
-    vcf = ""
-    for _, row in dataframe.iterrows():
-        # Trata valores nulos
-        nome = str(row.get('Empresa', 'Sem Nome'))
-        tel = str(row.get('Telefone', ''))
-        cnpj = str(row.get('CNPJ', ''))
+def gerar_vcf_individual(row: dict) -> bytes:
+    """Gera VCard para um único lead."""
+    nome = str(row.get('Empresa') or 'Sem Nome')
+    tel = str(row.get('Telefone') or '')
+    email = str(row.get('Email') or '')
+    cnpj = str(row.get('CNPJ') or '')
+    end = str(row.get('Endereço') or row.get('Endereco') or '')
+    site = str(row.get('Site') or '')
+    razao = str(row.get('Razão Social') or row.get('Razao Social') or nome)
 
-        vcf += "BEGIN:VCARD\nVERSION:3.0\n"
-        vcf += f"FN:{nome} (LeadMap)\n"
-        vcf += f"TEL;TYPE=CELL:{tel}\n"
-        if cnpj:
-            vcf += f"NOTE:CNPJ: {cnpj}\n"
-        vcf += "END:VCARD\n"
+    vcf = "BEGIN:VCARD\nVERSION:3.0\n"
+    vcf += f"FN:{nome}\n"
+    vcf += f"ORG:{razao}\n"
+    if tel and tel not in ('nan', 'None'):
+        vcf += f"TEL;TYPE=CELL,VOICE:{tel}\n"
+    if email and email not in ('nan', 'None'):
+        vcf += f"EMAIL;TYPE=WORK:{email}\n"
+    if end and end not in ('nan', 'None'):
+        vcf += f"ADR;TYPE=WORK:;;{end};;;;\n"
+    if site and site not in ('nan', 'None', 'Nao possui'):
+        vcf += f"URL;TYPE=WORK:{site}\n"
+    if cnpj and cnpj not in ('nan', 'None'):
+        vcf += f"NOTE:CNPJ: {cnpj}\n"
+    vcf += "END:VCARD\n"
     return vcf.encode('utf-8')
+
+
+def gerar_vcf(dataframe):
+    """Gera arquivo VCard consolidado para importar todos os contatos no celular."""
+    vcf_total = ""
+    for _, row in dataframe.iterrows():
+        vcf_total += gerar_vcf_individual(row.to_dict()).decode('utf-8')
+    return vcf_total.encode('utf-8')
 
 
 def gerar_pdf(dataframe, termo):

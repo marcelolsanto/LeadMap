@@ -62,26 +62,38 @@ class WorkerWallE(threading.Thread):
         return None
 
     def validar_email(self, email) -> str | None:
-        """Valida e sanitiza um endereco de email."""
+        """Valida e sanitiza a sintaxe de um endereço de e-mail."""
         if not email or not isinstance(email, str):
             return None
-        email = email.lower().strip()
-        bloqueados = [
-            'sentry', 'wixpress', 'noreply', 'nao-responda',
-            'usuario@', 'exemplo.com', 'domain.com', 'email@',
-            '.png', '.jpg', '.jpeg', '.gif', '.webp', '.js', '.css',
-            'hostmaster', 'postmaster', 'webmaster', 'support@wix',
-            'instagram.com', 'facebook.com', 'fb.com', 'wa.me', 'whatsapp.com',
-            'linktr.ee', 'linkedin.com', 'youtube.com', 'tiktok.com'
-        ]
-        if any(x in email for x in bloqueados):
+        try:
+            from services.email_validator import validar_sintaxe_email
+            return validar_sintaxe_email(email)
+        except Exception:
             return None
-        if re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
-            return email
-        return None
+
+    def validar_email_com_ping(self, email) -> tuple[str | None, str]:
+        """Valida email com checagem de servidor de correio DNS/MX e ping."""
+        if not email or not isinstance(email, str):
+            return None, ""
+        try:
+            from services.email_validator import validar_email_completo
+            email_limpo, valido, status = validar_email_completo(email, verificar_ping=True)
+            if valido and email_limpo:
+                return email_limpo, status
+            # Se a checagem de DNS falhar (ex: domínio de teste/intranet), verifica sintaxe
+            sintaxe = self.validar_email(email)
+            if sintaxe:
+                return sintaxe, "Sintaxe Válida"
+        except Exception as e:
+            logger.debug(f"Erro na validação de e-mail com ping {email}: {e}")
+            sintaxe = self.validar_email(email)
+            if sintaxe:
+                return sintaxe, "Sintaxe Válida"
+        return None, ""
 
     def eleger_melhor_contato(self, lead: dict) -> dict:
         """Seleciona os melhores dados de cada campo usando cascata de prioridade."""
+        import urllib.parse
 
         # A. ENDERECO HIBRIDO
         end_fiscal = lead.get("Endereco Fiscal")
@@ -98,17 +110,28 @@ class WorkerWallE(threading.Thread):
         else:
             lead["Endereço"] = None
 
+        # Link do ponto exato no Google Maps
+        if not lead.get("Google_Maps_Url"):
+            nome_emp = lead.get("Empresa", "")
+            local = lead.get("Endereço", "") or ""
+            termo_mapa = urllib.parse.quote_plus(f"{nome_emp}, {local}".strip(", "))
+            lead["Google_Maps_Url"] = f"https://www.google.com/maps/search/?api=1&query={termo_mapa}"
+
         # B. SITE E REDES SOCIAIS
         site_bruto = lead.get("Site", "")
         site_bio = lead.get("Site_Extraido_Bio", "")
-        insta_maps = lead.get("Instagram_Maps", "")
-        face_maps = lead.get("Facebook_Maps", "")
-        link_maps = lead.get("LinkedIn_Maps", "")
+        insta = lead.get("Instagram") or lead.get("Instagram_Maps", "")
+        face = lead.get("Facebook") or lead.get("Facebook_Maps", "")
+        linkin = lead.get("LinkedIn") or lead.get("LinkedIn_Maps", "")
 
-        # Cascata: Site Bio > Site Maps > Insta > Face > LinkedIn
+        lead["Instagram"] = insta if insta else ""
+        lead["Facebook"] = face if face else ""
+        lead["LinkedIn"] = linkin if linkin else ""
+
+        # Cascata: Site Bio > Site Maps/Crawl > Insta > Face > LinkedIn
         link_final = site_bio if site_bio else site_bruto
         if not link_final:
-            link_final = insta_maps if insta_maps else (face_maps if face_maps else link_maps)
+            link_final = insta if insta else (face if face else linkin)
 
         if not link_final or link_final == "Nao possui / Quebrado":
             lead["Site"] = "Nao possui"
@@ -127,8 +150,9 @@ class WorkerWallE(threading.Thread):
             else:
                 lead["Tipo_Link"] = "Site Oficial"
 
-        # C. EMAILS
+        # C. EMAILS COM PING DE CONFIRMAÇÃO DE SERVIDOR
         melhor_email = None
+        status_email = ""
         candidatos_certeza = []
 
         if lead.get("Email_Fiscal"):
@@ -142,21 +166,23 @@ class WorkerWallE(threading.Thread):
             candidatos_certeza.append(lead.get("Site"))
 
         for cand in candidatos_certeza:
-            validado = self.validar_email(cand)
+            validado, st_msg = self.validar_email_com_ping(cand)
             if validado:
                 melhor_email = validado
+                status_email = st_msg
                 if self.callback:
-                    self.callback(f"   E-mail aprovado: {validado}")
+                    self.callback(f"   E-mail validado ({st_msg}): {validado}")
                 break
 
         if not melhor_email:
             inferidos = lead.get("Emails_Inferidos", [])
             for cand in inferidos:
-                validado = self.validar_email(cand)
+                validado, st_msg = self.validar_email_com_ping(cand)
                 if validado:
                     melhor_email = validado
+                    status_email = st_msg
                     if self.callback:
-                        self.callback(f"   E-mail inferido aprovado: {validado}")
+                        self.callback(f"   E-mail inferido aprovado ({st_msg}): {validado}")
                     break
 
         if melhor_email:
@@ -164,9 +190,12 @@ class WorkerWallE(threading.Thread):
 
         lead["Email"] = melhor_email
         lead["Melhor_Email"] = melhor_email
+        lead["Email_Valido"] = status_email if melhor_email else "Não encontrado"
 
-        # D. TELEFONES
+        # D. TELEFONES E WHATSAPP
         candidatos_fone = []
+        if lead.get("WhatsApp"):
+            candidatos_fone.append(lead.get("WhatsApp"))
         if lead.get("Telefone_Fiscal"):
             candidatos_fone.append(lead.get("Telefone_Fiscal"))
         if lead.get("Telefone"):
@@ -186,6 +215,11 @@ class WorkerWallE(threading.Thread):
 
         if melhor_fone:
             self.stats["tels_formatados"] += 1
+            nums_puros = re.sub(r'\D', '', melhor_fone)
+            lead["WhatsApp_Url"] = f"https://wa.me/{nums_puros}?text=Ol%C3%A1%2C+vi+sua+empresa+no+Google+Maps"
+        else:
+            lead["WhatsApp_Url"] = ""
+
         lead["Telefone"] = melhor_fone
         lead["Melhor_Telefone"] = melhor_fone
 

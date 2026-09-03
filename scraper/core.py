@@ -113,63 +113,82 @@ class GoogleMapsScraper:
                             if len(txt) < 10 or "Anuncio" in txt or "Patrocinado" in txt:
                                 continue
 
+                            linhas = [linha.strip() for linha in txt.split('\n') if linha.strip()]
+                            if not linhas:
+                                continue
+                            nome = linhas[0]
+                            if len(nome) < 2 or "Anuncio" in nome or "Patrocinado" in nome:
+                                continue
+
                             tels = re.findall(r"\(?\d{2}\)?\s?\d{4,5}[-\s]?\d{4}", txt)
-                            if tels:
-                                tel = tels[0]
-                                nome = txt.split('\n')[0]
-                                chave = f"{nome}_{tel}"
+                            tel = tels[0] if tels else ""
 
-                                if chave not in unicos:
-                                    site_url = ""
-                                    instagram = ""
-                                    facebook = ""
-                                    linkedin = ""
+                            # Chave única: nome + telefone ou nome + primeiros caracteres
+                            chave = f"{nome}_{tel}" if tel else f"{nome}_{linhas[1] if len(linhas) > 1 else ''}"
 
-                                    try:
-                                        links = await card.locator("a").all()
-                                        for l in links:
-                                            h = await l.get_attribute("href")
-                                            if not h:
-                                                continue
-                                            if "/maps/" in h or "google.com/search" in h:
-                                                continue
-                                            if "instagram.com" in h:
-                                                instagram = h
-                                                continue
-                                            elif "facebook.com" in h or "fb.com" in h:
-                                                facebook = h
-                                                continue
-                                            elif "linkedin.com" in h:
-                                                linkedin = h
-                                                continue
-                                            if "google.com/url" in h:
-                                                parsed = urllib.parse.urlparse(h)
-                                                qs = urllib.parse.parse_qs(parsed.query)
-                                                url_real = qs.get('q', qs.get('url', [None]))[0]
-                                                if url_real and not site_url:
-                                                    site_url = url_real
-                                            elif h.startswith("http") and "google.com" not in h and not site_url:
-                                                site_url = h
-                                    except Exception as e:
-                                        logger.debug(f"Erro ao extrair links do card: {e}")
+                            if chave not in unicos:
+                                site_url = ""
+                                instagram = ""
+                                facebook = ""
+                                linkedin = ""
+                                maps_place_url = ""
 
-                                    lead = {
-                                        "Empresa": nome,
-                                        "Telefone": tel,
-                                        "Endereco": parser.limpar_endereco(txt, nome, tel),
-                                        "Site": site_url,
-                                        "Instagram_Maps": instagram,
-                                        "Facebook_Maps": facebook,
-                                        "LinkedIn_Maps": linkedin,
-                                        "Data": datetime.now().strftime("%d/%m/%Y")
-                                    }
+                                try:
+                                    links = await card.locator("a").all()
+                                    for l in links:
+                                        h = await l.get_attribute("href")
+                                        if not h:
+                                            continue
+                                        if "/maps/place/" in h and not maps_place_url:
+                                            maps_place_url = h
+                                            continue
+                                        if "/maps/" in h or "google.com/search" in h:
+                                            continue
+                                        if "instagram.com" in h:
+                                            instagram = h
+                                            continue
+                                        elif "facebook.com" in h or "fb.com" in h:
+                                            facebook = h
+                                            continue
+                                        elif "linkedin.com" in h:
+                                            linkedin = h
+                                            continue
+                                        if "google.com/url" in h:
+                                            parsed = urllib.parse.urlparse(h)
+                                            qs = urllib.parse.parse_qs(parsed.query)
+                                            url_real = qs.get('q', qs.get('url', [None]))[0]
+                                            if url_real and not site_url:
+                                                site_url = url_real
+                                        elif h.startswith("http") and "google.com" not in h and not site_url:
+                                            site_url = h
+                                except Exception as e:
+                                    logger.debug(f"Erro ao extrair links do card: {e}")
 
-                                    self._fila_raw.put(lead)
-                                    unicos.add(chave)
-                                    self.total_enviado += 1
-                                    count_novos += 1
-                                    if self._estatisticas is not None:
-                                        self._estatisticas["total_bb8"] += 1
+                                endereco_limpo = parser.limpar_endereco(txt, nome, tel)
+
+                                # URL exata no Google Maps para redirecionamento
+                                if not maps_place_url:
+                                    query_busca = urllib.parse.quote_plus(f"{nome}, {endereco_limpo}")
+                                    maps_place_url = f"https://www.google.com/maps/search/?api=1&query={query_busca}"
+
+                                lead = {
+                                    "Empresa": nome,
+                                    "Telefone": tel,
+                                    "Endereco": endereco_limpo,
+                                    "Site": site_url,
+                                    "Instagram_Maps": instagram,
+                                    "Facebook_Maps": facebook,
+                                    "LinkedIn_Maps": linkedin,
+                                    "Google_Maps_Url": maps_place_url,
+                                    "Data": datetime.now().strftime("%d/%m/%Y")
+                                }
+
+                                self._fila_raw.put(lead)
+                                unicos.add(chave)
+                                self.total_enviado += 1
+                                count_novos += 1
+                                if self._estatisticas is not None:
+                                    self._estatisticas["total_bb8"] += 1
 
                         except Exception as e:
                             logger.debug(f"Erro ao processar card: {e}")

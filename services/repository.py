@@ -24,7 +24,7 @@ def _enable_wal(conn: sqlite3.Connection) -> None:
 
 
 def init_dbs():
-    """Inicializa todas as tabelas se nao existirem."""
+    """Inicializa todas as tabelas se nao existirem e aplica migrações de colunas."""
 
     # 1. Banco de LEADS
     try:
@@ -46,6 +46,26 @@ def init_dbs():
                 hash_unico TEXT UNIQUE
             )
         """)
+
+        # Migração segura para novas colunas
+        colunas_novas = [
+            ("whatsapp", "TEXT"),
+            ("instagram", "TEXT"),
+            ("facebook", "TEXT"),
+            ("linkedin", "TEXT"),
+            ("email_valido", "TEXT"),
+            ("maps_url", "TEXT"),
+            ("razao_social", "TEXT")
+        ]
+        cursor.execute("PRAGMA table_info(leads);")
+        colunas_existentes = [row[1] for row in cursor.fetchall()]
+        for col_nome, col_tipo in colunas_novas:
+            if col_nome not in colunas_existentes:
+                try:
+                    cursor.execute(f"ALTER TABLE leads ADD COLUMN {col_nome} {col_tipo};")
+                except Exception as e:
+                    logger.debug(f"Coluna {col_nome} ja existente ou erro: {e}")
+
         # Indices para buscas rapidas
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_leads_nicho ON leads(nicho);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);")
@@ -128,11 +148,12 @@ def salvar_lote_leads(lista_leads: list, nicho_atual: str) -> int:
 
     for lead in lista_leads:
         try:
-            chave = f"{lead.get('Empresa')}-{lead.get('Telefone')}"
+            chave = f"{lead.get('Empresa')}-{lead.get('Telefone') or lead.get('Site')}"
             cursor.execute("""
                 INSERT OR IGNORE INTO leads
-                (empresa, email, telefone, site, endereco, cnpj, nicho, origem, data_captura, hash_unico)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (empresa, email, telefone, site, endereco, cnpj, nicho, origem, data_captura, hash_unico,
+                 whatsapp, instagram, facebook, linkedin, email_valido, maps_url, razao_social)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 lead.get("Empresa"),
                 lead.get("Email") or lead.get("Melhor_Email"),
@@ -143,7 +164,14 @@ def salvar_lote_leads(lista_leads: list, nicho_atual: str) -> int:
                 nicho_atual,
                 "LeadMap Pro",
                 data_hoje,
-                chave
+                chave,
+                lead.get("WhatsApp_Url") or lead.get("WhatsApp", ""),
+                lead.get("Instagram", ""),
+                lead.get("Facebook", ""),
+                lead.get("LinkedIn", ""),
+                lead.get("Email_Valido", ""),
+                lead.get("Google_Maps_Url", ""),
+                lead.get("Razao Social") or lead.get("Razão Social", "")
             ))
             if cursor.rowcount > 0:
                 count_novos += 1

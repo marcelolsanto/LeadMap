@@ -70,27 +70,40 @@ class WorkerR2D2(threading.Thread):
             self._lock_ativos = _la
             self._ativos_agora = _aa
 
-    def investigar_cnpj(self, nome_empresa: str) -> str | None:
-        """Busca CNPJ via DuckDuckGo."""
+    def investigar_cnpj(self, nome_empresa: str, cidade: str = "", site: str = "") -> str | None:
+        """Busca CNPJ via DuckDuckGo com múltiplas estratégias (Nome, Cidade, Domínio)."""
         termo_limpo = re.sub(r'[^\w\s]', '', nome_empresa.split('-')[0])
-        termo_limpo = termo_limpo.replace(" LTDA", "").replace(" SA", "").strip()
+        termo_limpo = termo_limpo.replace(" LTDA", "").replace(" SA", "").replace(" ME", "").replace(" EPP", "").strip()
         if len(termo_limpo) < 3:
             return None
 
-        query = f'"{termo_limpo}" CNPJ'
         padrao = r'\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}'
+
+        queries = [f'"{termo_limpo}" CNPJ']
+        if cidade:
+            cidade_limpa = re.sub(r'[^\w\s]', '', cidade).strip()[:25]
+            if cidade_limpa:
+                queries.append(f'"{termo_limpo}" {cidade_limpa} CNPJ')
+        if site and "http" in site and not any(d in site for d in ('instagram', 'facebook', 'linkedin')):
+            dominio = site.replace('https://', '').replace('http://', '').replace('www.', '').split('/')[0]
+            if dominio:
+                queries.append(f'"{dominio}" CNPJ')
 
         try:
             if DDGS:
                 with DDGS() as ddgs:
-                    resultados = list(ddgs.text(query, max_results=3))
-                    for res in resultados:
-                        texto_resultado = res.get('body', '') + " " + res.get('title', '')
-                        match = re.search(padrao, texto_resultado)
-                        if match:
-                            return match.group(0)
+                    for query in queries:
+                        resultados = list(ddgs.text(query, max_results=3))
+                        for res in resultados:
+                            texto_resultado = res.get('body', '') + " " + res.get('title', '')
+                            matches = re.findall(padrao, texto_resultado)
+                            for match in matches:
+                                cnpj_limpo = re.sub(r'\D', '', match).zfill(14)
+                                if len(cnpj_limpo) == 14 and _validar_digitos_cnpj(cnpj_limpo):
+                                    return match
+                        time.sleep(0.4)
         except Exception as e:
-            logger.warning(f"Erro DDGS ao buscar CNPJ de '{nome_empresa}': {e}")
+            logger.debug(f"Erro DDGS ao buscar CNPJ de '{nome_empresa}': {e}")
 
         return None
 
@@ -115,7 +128,11 @@ class WorkerR2D2(threading.Thread):
                 elif nome_empresa:
                     if self.callback:
                         self.callback(f"R2-D2-{self.id}: Investigando '{nome_empresa}'...")
-                    cnpj_achado = self.investigar_cnpj(nome_empresa)
+                    cnpj_achado = self.investigar_cnpj(
+                        nome_empresa,
+                        cidade=lead.get("Endereco", lead.get("Endereço", "")),
+                        site=lead.get("Site", "")
+                    )
                     if cnpj_achado:
                         cnpj = cnpj_achado
                         lead["CNPJ"] = cnpj
