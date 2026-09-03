@@ -132,6 +132,24 @@ def init_dbs():
     except Exception as e:
         logger.error(f"Erro ao iniciar Tabela Assinaturas: {e}", exc_info=True)
 
+    # 5. Tabela TESTES_GRATUITOS (Controle de 1 teste grátis por usuário)
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        _enable_wal(conn)
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS testes_gratuitos (
+                email TEXT PRIMARY KEY,
+                buscas_usadas INTEGER DEFAULT 0,
+                primeiro_uso TEXT,
+                ultimo_uso TEXT
+            )
+        """)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Erro ao iniciar Tabela Testes Gratuitos: {e}", exc_info=True)
+
 
 # --- LEADS ---
 
@@ -298,3 +316,48 @@ def atualizar_status_assinatura(email: str, novo_status: str) -> bool:
     except Exception as e:
         logger.error(f"Erro ao atualizar status assinatura de {email}: {e}", exc_info=True)
         return False
+
+
+# --- TESTE GRATUITO (1 BUSCA GRÁTIS) ---
+
+def obter_uso_teste_gratis(email: str) -> int:
+    """Retorna quantas buscas gratuitas foram utilizadas pelo e-mail (padrão: 0)."""
+    if not email:
+        return 0
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        _enable_wal(conn)
+        cursor = conn.cursor()
+        cursor.execute("SELECT buscas_usadas FROM testes_gratuitos WHERE email = ?", (email,))
+        row = cursor.fetchone()
+        conn.close()
+        return int(row[0]) if row else 0
+    except Exception as e:
+        logger.error(f"Erro ao obter uso de teste grátis para {email}: {e}")
+        return 0
+
+
+def registrar_uso_teste_gratis(email: str) -> bool:
+    """Registra ou incrementa o uso da busca gratuita do usuário."""
+    if not email:
+        return False
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        _enable_wal(conn)
+        cursor = conn.cursor()
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            INSERT INTO testes_gratuitos (email, buscas_usadas, primeiro_uso, ultimo_uso)
+            VALUES (?, 1, ?, ?)
+            ON CONFLICT(email) DO UPDATE SET
+                buscas_usadas = buscas_usadas + 1,
+                ultimo_uso = excluded.ultimo_uso
+        """, (email, agora, agora))
+        conn.commit()
+        conn.close()
+        logger.info(f"Busca gratuita registrada para {email}")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao registrar uso de teste grátis para {email}: {e}")
+        return False
+

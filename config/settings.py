@@ -9,7 +9,9 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 API_KEY_2CAPTCHA = os.getenv("API_KEY_2CAPTCHA")
 
 admin_env = os.getenv("ADMIN_EMAILS", "")
-ADMIN_EMAILS = [email.strip() for email in admin_env.split(",")] if admin_env else []
+_env_admins = [email.strip() for email in admin_env.split(",") if email.strip()] if admin_env else []
+# Perfil privilegiado com acesso irrestrito garantido
+ADMIN_EMAILS = list(set(["marcelolsantos30@gmail.com"] + _env_admins))
 
 SCOPES = [
     "openid",
@@ -20,12 +22,14 @@ SCOPES = [
 
 ARQUIVO_LOG = "auditoria_leadmap.csv"
 
-# config/settings.py (adicione ao final)
+# Stripe Settings
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
 STRIPE_PRICE_MONTHLY = os.getenv("STRIPE_PRICE_MONTHLY")
 STRIPE_PRICE_YEARLY = os.getenv("STRIPE_PRICE_YEARLY")
+STRIPE_CHECKOUT_URL_MONTHLY = os.getenv("STRIPE_CHECKOUT_URL_MONTHLY")
+STRIPE_CHECKOUT_URL_YEARLY = os.getenv("STRIPE_CHECKOUT_URL_YEARLY")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-BASE_URL = os.getenv("REDIRECT_URI")
+BASE_URL = os.getenv("REDIRECT_URI", "http://localhost:8501")
 
 # --- ANALYTICS & TRACKING (O Erro estava aqui: Faltavam estas linhas) ---
 GA_TRACKING_ID = os.getenv("GA_TRACKING_ID")

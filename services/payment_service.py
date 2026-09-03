@@ -1,30 +1,51 @@
-import stripe
-import streamlit as st
 from config import settings
 from services import repository
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-stripe.api_key = settings.STRIPE_API_KEY
+try:
+    import stripe
+    stripe.api_key = getattr(settings, 'STRIPE_API_KEY', None)
+except ImportError:
+    stripe = None
+
+
 
 
 def criar_sessao_checkout(email_usuario: str, tipo_plano: str = "mensal") -> str:
-    """Cria link de pagamento no Stripe."""
+    """
+    Cria ou retorna link de pagamento do Stripe para Cartão ou PIX.
+    Suporta links diretos (STRIPE_CHECKOUT_URL_*) ou criação dinâmica via API.
+    """
     logger.info(f"Iniciando Checkout para {email_usuario}. Plano: {tipo_plano}")
 
-    if tipo_plano == "anual":
-        price_id = settings.STRIPE_PRICE_YEARLY
-    else:
-        price_id = settings.STRIPE_PRICE_MONTHLY
+    # 1. Verifica se há link direto de pagamento configurado
+    if tipo_plano == "anual" and getattr(settings, 'STRIPE_CHECKOUT_URL_YEARLY', None):
+        link = settings.STRIPE_CHECKOUT_URL_YEARLY
+        if email_usuario and "?" not in link:
+            return f"{link}?prefilled_email={email_usuario}"
+        return link
+    elif tipo_plano == "mensal" and getattr(settings, 'STRIPE_CHECKOUT_URL_MONTHLY', None):
+        link = settings.STRIPE_CHECKOUT_URL_MONTHLY
+        if email_usuario and "?" not in link:
+            return f"{link}?prefilled_email={email_usuario}"
+        return link
 
-    if not price_id:
-        logger.error("ID do preco nao encontrado em settings.")
+    # 2. Criação de sessão via API Stripe
+    if tipo_plano == "anual":
+        price_id = getattr(settings, 'STRIPE_PRICE_YEARLY', None)
+    else:
+        price_id = getattr(settings, 'STRIPE_PRICE_MONTHLY', None)
+
+    if not price_id or not settings.STRIPE_API_KEY:
+        logger.warning(f"Chave Stripe ou Price ID ({tipo_plano}) não configurados.")
         return "#"
 
     try:
+        # Se suportado pela conta Stripe, permite cartão e boleto
         checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
+            payment_method_types=['card', 'boleto'],
             customer_email=email_usuario,
             line_items=[{'price': price_id, 'quantity': 1}],
             mode='subscription',
@@ -33,8 +54,20 @@ def criar_sessao_checkout(email_usuario: str, tipo_plano: str = "mensal") -> str
         )
         return checkout_session.url
     except stripe.error.StripeError as e:
-        logger.error(f"Erro Stripe ao criar checkout: {e}", exc_info=True)
-        return "#"
+        # Fallback apenas para cartão caso boleto não esteja ativado na conta Stripe
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                customer_email=email_usuario,
+                line_items=[{'price': price_id, 'quantity': 1}],
+                mode='subscription',
+                success_url=f"{settings.BASE_URL}?payment=success",
+                cancel_url=f"{settings.BASE_URL}?payment=cancel",
+            )
+            return checkout_session.url
+        except Exception as e2:
+            logger.error(f"Erro Stripe ao criar checkout: {e2}", exc_info=True)
+            return "#"
     except Exception as e:
         logger.error(f"Erro inesperado no checkout: {e}", exc_info=True)
         return "#"
