@@ -20,3 +20,5 @@ leadmap_usage.db/
 .user_session
 .oauth_state
 relatorios_completos/
+actions-runner/
+logs/
