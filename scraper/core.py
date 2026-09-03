@@ -117,8 +117,14 @@ class GoogleMapsScraper:
                             if not linhas:
                                 continue
                             nome = linhas[0]
-                            if len(nome) < 2 or "Anuncio" in nome or "Patrocinado" in nome:
+                            nome_lower = nome.lower().strip()
+                            if len(nome) < 2 or "anuncio" in nome_lower or "patrocinado" in nome_lower:
                                 continue
+                            if any(j in nome_lower for j in ["classificação", "todos os filtros", "mais filtros"]):
+                                continue
+                            if nome_lower in ("resultados", "horas", "aberto agora", "fechado"):
+                                continue
+
 
                             tels = re.findall(r"\(?\d{2}\)?\s?\d{4,5}[-\s]?\d{4}", txt)
                             tel = tels[0] if tels else ""
