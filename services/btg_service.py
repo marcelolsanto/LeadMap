@@ -80,7 +80,17 @@ def gerar_pix_copia_cola(
     Gera o código oficial 'Pix Copia e Cola' (BRCode EMVCo).
     Compatível com BTG Pactual, Nubank, Itaú, Bradesco, Inter, etc.
     """
-    chave_pix = chave or getattr(settings, "BTG_PIX_CHAVE", "marcelolsantos30@gmail.com")
+    chave_raw = (chave or getattr(settings, "BTG_PIX_CHAVE", "62977131000180")).strip()
+    # Se a chave for CNPJ ou CPF ou telefone com pontuação, remove formatação
+    if "/" in chave_raw or "-" in chave_raw or "." in chave_raw:
+        digitos = "".join(c for c in chave_raw if c.isdigit())
+        if len(digitos) in (11, 14):
+            chave_pix = digitos
+        else:
+            chave_pix = chave_raw
+    else:
+        chave_pix = chave_raw
+
     beneficiario = nome or getattr(settings, "BTG_BENEFICIARIO_NOME", "MARCELO SANTOS")
     cidade_pix = cidade or getattr(settings, "BTG_BENEFICIARIO_CIDADE", "BRASILIA")
 

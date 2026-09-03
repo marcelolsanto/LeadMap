@@ -94,8 +94,9 @@ def render_paywall(user_email: str) -> None:
             pix_m = btg_service.gerar_pix_copia_cola(30.00, txid="MENSAL")
             qr_url_m = btg_service.gerar_qr_code_url(pix_m)
             st.image(qr_url_m, width=200)
-            st.text_area("Código Pix Copia e Cola:", value=pix_m, height=80, key="pix_area_m")
-            st.info("Abra o app de qualquer banco, escolha 'Pix Copia e Cola' e confirme o pagamento de R$ 30,00 para **MARCELO SANTOS**.")
+            st.text_area("📋 Código Pix Copia e Cola (com valor):", value=pix_m, height=70, key="pix_area_m")
+            st.caption("Ou use a Chave Pix direta (CNPJ): `62.977.131/0001-80`")
+            st.info("Abra o app de qualquer banco, escolha 'Pix Copia e Cola' e confirme o pagamento de **R$ 30,00** para **BTG Pactual**.")
             
             if st.button("✅ Já fiz o Pix! Liberar Acesso", key="confirm_pix_m", type="primary", use_container_width=True):
                 repository.salvar_assinatura(
@@ -145,8 +146,9 @@ def render_paywall(user_email: str) -> None:
             pix_a = btg_service.gerar_pix_copia_cola(199.00, txid="ANUAL")
             qr_url_a = btg_service.gerar_qr_code_url(pix_a)
             st.image(qr_url_a, width=200)
-            st.text_area("Código Pix Copia e Cola:", value=pix_a, height=80, key="pix_area_a")
-            st.info("Abra o app de qualquer banco, escolha 'Pix Copia e Cola' e confirme o pagamento de R$ 199,00 para **MARCELO SANTOS**.")
+            st.text_area("📋 Código Pix Copia e Cola (com valor):", value=pix_a, height=70, key="pix_area_a")
+            st.caption("Ou use a Chave Pix direta (CNPJ): `62.977.131/0001-80`")
+            st.info("Abra o app de qualquer banco, escolha 'Pix Copia e Cola' e confirme o pagamento de **R$ 199,00** para **BTG Pactual**.")
             
             if st.button("✅ Já fiz o Pix! Liberar Acesso", key="confirm_pix_a", type="primary", use_container_width=True):
                 repository.salvar_assinatura(
@@ -160,6 +162,7 @@ def render_paywall(user_email: str) -> None:
                 st.toast("🎉 Pagamento registrado! Acesso anual VIP liberado.", icon="✅")
                 st.session_state.navegacao = "inicio"
                 st.rerun()
+
 
     st.markdown("""
     <div style="text-align: center; margin-top: 30px; color: #64748B; font-size: 0.85rem;">
