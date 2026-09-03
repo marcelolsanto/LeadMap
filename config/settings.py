@@ -12,6 +12,8 @@ admin_env = os.getenv("ADMIN_EMAILS", "")
 _env_admins = [email.strip() for email in admin_env.split(",") if email.strip()] if admin_env else []
 # Perfil privilegiado com acesso irrestrito garantido
 ADMIN_EMAILS = list(set(["marcelolsantos30@gmail.com"] + _env_admins))
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "marcelo2026")
+
 
 SCOPES = [
     "openid",

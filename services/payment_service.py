@@ -49,7 +49,7 @@ def criar_sessao_checkout(email_usuario: str, tipo_plano: str = "mensal") -> str
             customer_email=email_usuario,
             line_items=[{'price': price_id, 'quantity': 1}],
             mode='subscription',
-            success_url=f"{settings.BASE_URL}?payment=success",
+            success_url=f"{settings.BASE_URL}?payment=success&email={email_usuario}",
             cancel_url=f"{settings.BASE_URL}?payment=cancel",
         )
         return checkout_session.url
@@ -61,7 +61,7 @@ def criar_sessao_checkout(email_usuario: str, tipo_plano: str = "mensal") -> str
                 customer_email=email_usuario,
                 line_items=[{'price': price_id, 'quantity': 1}],
                 mode='subscription',
-                success_url=f"{settings.BASE_URL}?payment=success",
+                success_url=f"{settings.BASE_URL}?payment=success&email={email_usuario}",
                 cancel_url=f"{settings.BASE_URL}?payment=cancel",
             )
             return checkout_session.url
@@ -77,13 +77,20 @@ def verificar_status_assinatura(email: str) -> bool:
     """
     Verifica se o usuário tem assinatura ativa.
     Ordem de verificação:
-    1. Admins sempre têm acesso
-    2. Consulta banco local (atualizado via Stripe Webhook)
+    1. Admins e Desenvolvedor (marcelolsantos30@gmail.com) têm acesso livre irrestrito sem plano.
+    2. Consulta banco local (atualizado via Stripe Webhook ou Checkout)
     3. Fallback: consulta direta ao Stripe API
     """
-    # 1. Admins têm acesso livre
-    if email in settings.ADMIN_EMAILS:
+    if not email:
+        return False
+
+    email_clean = email.strip().lower()
+
+    # 1. Desenvolvedor e Admins têm acesso livre irrestrito permanente
+    admins_lower = [a.strip().lower() for a in getattr(settings, 'ADMIN_EMAILS', [])]
+    if email_clean == "marcelolsantos30@gmail.com" or email_clean in admins_lower:
         return True
+
 
     # 2. Consulta banco local (preferencial — atualizado pelo webhook)
     assinatura = repository.consultar_assinatura(email)

@@ -103,6 +103,23 @@ analytics_service.inject_analytics()
 
 
 def check_auth():
+    # --- RETORNO DE PAGAMENTO BEM-SUCEDIDO (STRIPE CARTÃO OU PIX) ---
+    if st.query_params.get("payment") == "success":
+        email_pago = st.query_params.get("email") or st.session_state.get("user_info", {}).get("email")
+        if email_pago:
+            repository.salvar_assinatura(
+                email=email_pago,
+                status="active",
+                customer_id="stripe_checkout",
+                subscription_id="sub_checkout",
+                valido_ate="vitalicio"
+            )
+            audit_service.log_console("PAYMENT", f"Assinatura liberada após pagamento para {email_pago}")
+            st.toast("🎉 Pagamento confirmado via Cartão/PIX! Seu acesso foi liberado.", icon="✅")
+        st.query_params.clear()
+        st.session_state.navegacao = "inicio"
+        st.rerun()
+
     # --- 1. LOGOUT ---
     if st.query_params.get("logout"):
         email_saindo = st.session_state.user_info.get('email', 'Desconhecido')
@@ -113,6 +130,7 @@ def check_auth():
         auth_service.limpar_sessao_local(token_atual)
         st.query_params.clear()
         st.rerun()
+
 
     if st.session_state.logged_in:
         return

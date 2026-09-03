@@ -44,8 +44,9 @@ def obter_servidores_mx(dominio: str) -> list[str]:
     try:
         import dns.resolver
         resolver = dns.resolver.Resolver()
-        resolver.lifetime = 3.0
-        resolver.timeout = 2.0
+        resolver.nameservers = ['8.8.8.8', '1.1.1.1', '8.8.4.4']
+        resolver.lifetime = 4.0
+        resolver.timeout = 2.5
 
         answers = resolver.resolve(dominio, "MX")
         mx_records = sorted(answers, key=lambda r: r.preference)
@@ -56,11 +57,13 @@ def obter_servidores_mx(dominio: str) -> list[str]:
         try:
             import dns.resolver
             resolver = dns.resolver.Resolver()
-            resolver.lifetime = 2.0
+            resolver.nameservers = ['8.8.8.8', '1.1.1.1']
+            resolver.lifetime = 3.0
             resolver.resolve(dominio, "A")
             return [dominio]
         except Exception:
             return []
+
 
 
 def ping_servidor_smtp(mx_host: str, timeout: float = 2.5) -> bool:
