@@ -178,24 +178,17 @@ def check_auth():
 
 def check_payment(email: str) -> None:
     """
+
     Gate de pagamento & Planos:
-    1. Admins (incluindo marcelolsantos30@gmail.com) têm acesso livre irrestrito.
-    2. Assinantes com plano ativo no Stripe têm acesso liberado.
-    3. Se o usuário ativou o modo teste gratuito e ainda não usou, libera a busca única.
-    4. Caso contrário, exibe os 3 cards (Teste Gratuito 1 busca, Mensal R$ 30, Anual R$ 199 com 45% OFF).
+    1. Admins e Desenvolvedor (marcelolsantos30@gmail.com) têm acesso livre irrestrito permanente.
+    2. Assinantes com plano ativo (Mensal/Anual) têm acesso liberado sem limites.
+    3. Usuário com créditos de consulta avulsa (Pay-per-search) tem acesso liberado para sua busca.
+    4. Caso contrário, exibe os 3 cards (Consulta Avulsa, Mensal R$ 30, Anual R$ 199 com 45% OFF).
     """
     if payment_service.verificar_status_assinatura(email):
-        return  # Acesso irrestrito (Admin ou Assinante)
+        return  # Acesso liberado (Admin, Assinante ou com Crédito)
 
-    # Se ativou modo teste gratuito nesta sessão:
-    if st.session_state.get("modo_teste_gratis"):
-        uso_gratis = repository.obter_uso_teste_gratis(email)
-        if uso_gratis == 0:
-            return  # Permite acessar a tela de busca para sua única busca grátis!
-        else:
-            st.session_state.modo_teste_gratis = False
-
-    # Exibe a tela de planos com cards de marketing
+    # Exibe a tela de planos com cards oficiais BTG Pactual
     paywall_view.render_paywall(email)
     st.stop()
 
@@ -221,24 +214,29 @@ if "df_leads" not in st.session_state: st.session_state.df_leads = pd.DataFrame(
 if "termo" not in st.session_state: st.session_state.termo = ""
 if "nicho_atual" not in st.session_state: st.session_state.nicho_atual = ""
 if "qtd_leads_salvos" not in st.session_state: st.session_state.qtd_leads_salvos = 0
-if "modo_teste_gratis" not in st.session_state: st.session_state.modo_teste_gratis = False
 
 check_auth()
 
-# Bug 1 FIX: gate de pagamento — verifica assinatura antes de renderizar qualquer tela
+# Bug 1 FIX: gate de pagamento — verifica assinatura/créditos antes de renderizar qualquer tela
 check_payment(st.session_state.user_info.get("email", ""))
 
 # --- HEADER ---
 user_email = st.session_state.user_info.get('email', 'Usuario')
 user_pic = st.session_state.user_info.get('picture', '')
 
-is_admin = user_email in settings.ADMIN_EMAILS
+is_admin = (user_email == "marcelolsantos30@gmail.com") or (user_email in settings.ADMIN_EMAILS)
+sub = repository.consultar_assinatura(user_email)
+is_subscriber = sub is not None and sub.get("status") in ("active", "trialing")
+creditos = repository.obter_creditos_consulta(user_email)
+
 if is_admin:
     badge_plano = "<span style='background-color:#FEF3C7; color:#B45309; padding:4px 10px; border-radius:9999px; font-size:0.75rem; font-weight:700; margin-right:8px;'>👑 ADMIN ILIMITADO</span>"
-elif st.session_state.get("modo_teste_gratis"):
-    badge_plano = "<span style='background-color:#E0E7FF; color:#4338CA; padding:4px 10px; border-radius:9999px; font-size:0.75rem; font-weight:700; margin-right:8px;'>🎁 TESTE GRATUITO (1 BUSCA)</span>"
-else:
+elif is_subscriber:
     badge_plano = "<span style='background-color:#DEF7EC; color:#03543F; padding:4px 10px; border-radius:9999px; font-size:0.75rem; font-weight:700; margin-right:8px;'>⭐ ASSINANTE PRO</span>"
+elif creditos > 0:
+    badge_plano = f"<span style='background-color:#E0E7FF; color:#4338CA; padding:4px 10px; border-radius:9999px; font-size:0.75rem; font-weight:700; margin-right:8px;'>🎯 {creditos} CONSULTA(S) DISPONÍVEL(IS)</span>"
+else:
+    badge_plano = ""
 
 st.markdown(f"""
 <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom:1px solid #e2e8f0; margin-bottom:20px;">
@@ -251,6 +249,7 @@ st.markdown(f"""
 </div>
 </div>
 """, unsafe_allow_html=True)
+
 
 # ========================================================
 # TELA 1: INICIO
@@ -278,11 +277,13 @@ if st.session_state.navegacao == "inicio":
                 logger.info(f"Usuario {user} clicou em INICIAR.")
 
                 if nicho and bairro:
-                    if st.session_state.get("modo_teste_gratis"):
-                        repository.registrar_uso_teste_gratis(user)
-                        st.toast("🎁 Você utilizou seu teste gratuito de 1 busca!", icon="🚀")
+                    if not is_admin and not is_subscriber:
+                        consumido = repository.consumir_credito_consulta(user)
+                        if consumido:
+                            st.toast("🎯 1 crédito de consulta utilizado para esta varredura.", icon="🚀")
 
                     st.session_state.termo = f"{bairro}, {cidade}, {nicho}"
+
                     audit_service.log_console("USER_ACTION", f"Iniciou busca: '{nicho}' em '{bairro}'")
 
                     st.session_state.nicho_atual = nicho

@@ -90,16 +90,23 @@ def _criar_app():
                 email_comprador = tags.get("email") or tags.get("user") or data_obj.get("displayText")
 
                 if email_comprador and "@" in str(email_comprador):
-                    repository.salvar_assinatura(
-                        email=str(email_comprador).strip().lower(),
-                        status="active",
-                        customer_id="btg_pactual",
-                        subscription_id=link_id or tx_id or "btg_link",
-                        valido_ate="vitalicio"
-                    )
-                    logger.info(f"Assinatura ativada via Webhook BTG Pactual para {email_comprador}")
+                    email_clean = str(email_comprador).strip().lower()
+                    # Se for o link de consulta avulsa (ou valor avulso):
+                    if (link_url and "rD8wXVZ0NTPvIOY" in link_url) or (amount and float(amount) < 25):
+                        repository.adicionar_creditos_consulta(email_clean, 1)
+                        logger.info(f"1 Crédito de consulta adicionado via Webhook BTG para {email_clean}")
+                    else:
+                        repository.salvar_assinatura(
+                            email=email_clean,
+                            status="active",
+                            customer_id="btg_pactual",
+                            subscription_id=link_id or tx_id or "btg_link",
+                            valido_ate="vitalicio"
+                        )
+                        logger.info(f"Assinatura ativada via Webhook BTG Pactual para {email_clean}")
                 else:
                     logger.info(f"Pagamento BTG recebido de '{payer_name}' (Link: {link_url}).")
+
 
 
             return jsonify({"status": "received"}), 200

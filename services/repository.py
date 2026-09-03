@@ -145,10 +145,19 @@ def init_dbs():
                 ultimo_uso TEXT
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS creditos_consultas (
+                email TEXT PRIMARY KEY,
+                creditos_disponiveis INTEGER DEFAULT 0,
+                total_comprados INTEGER DEFAULT 0,
+                atualizado_em TEXT
+            )
+        """)
         conn.commit()
         conn.close()
     except Exception as e:
-        logger.error(f"Erro ao iniciar Tabela Testes Gratuitos: {e}", exc_info=True)
+        logger.error(f"Erro ao iniciar Tabelas de Acesso: {e}", exc_info=True)
+
 
 
 # --- LEADS ---
@@ -360,4 +369,76 @@ def registrar_uso_teste_gratis(email: str) -> bool:
     except Exception as e:
         logger.error(f"Erro ao registrar uso de teste grátis para {email}: {e}")
         return False
+
+
+# --- GESTÃO DE CRÉDITOS DE CONSULTA AVULSA (PAY-PER-SEARCH) ---
+
+def obter_creditos_consulta(email: str) -> int:
+    """Retorna a quantidade de créditos de busca avulsa disponíveis para o usuário."""
+    if not email:
+        return 0
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        _enable_wal(conn)
+        cursor = conn.cursor()
+        cursor.execute("SELECT creditos_disponiveis FROM creditos_consultas WHERE email = ?", (email.strip().lower(),))
+        row = cursor.fetchone()
+        conn.close()
+        return int(row[0]) if row else 0
+    except Exception as e:
+        logger.error(f"Erro ao obter créditos de consulta para {email}: {e}")
+        return 0
+
+
+def adicionar_creditos_consulta(email: str, quantidade: int = 1) -> bool:
+    """Adiciona créditos de consulta avulsa após confirmação de pagamento."""
+    if not email or quantidade <= 0:
+        return False
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        _enable_wal(conn)
+        cursor = conn.cursor()
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            INSERT INTO creditos_consultas (email, creditos_disponiveis, total_comprados, atualizado_em)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(email) DO UPDATE SET
+                creditos_disponiveis = creditos_disponiveis + excluded.creditos_disponiveis,
+                total_comprados = total_comprados + excluded.total_comprados,
+                atualizado_em = excluded.atualizado_em
+        """, (email.strip().lower(), quantidade, quantidade, agora))
+        conn.commit()
+        conn.close()
+        logger.info(f"{quantidade} crédito(s) de consulta adicionado(s) para {email}")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao adicionar créditos para {email}: {e}")
+        return False
+
+
+def consumir_credito_consulta(email: str) -> bool:
+    """Consome 1 crédito de consulta avulsa quando o usuário dispara a busca."""
+    if not email:
+        return False
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        _enable_wal(conn)
+        cursor = conn.cursor()
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            UPDATE creditos_consultas
+            SET creditos_disponiveis = MAX(0, creditos_disponiveis - 1),
+                atualizado_em = ?
+            WHERE email = ? AND creditos_disponiveis > 0
+        """, (agora, email.strip().lower()))
+        consumed = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        if consumed:
+            logger.info(f"1 crédito de consulta consumido por {email}")
+        return consumed
+    except Exception as e:
+        logger.error(f"Erro ao consumir crédito de consulta para {email}: {e}")
+        return False
+
 

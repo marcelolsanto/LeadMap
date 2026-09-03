@@ -92,7 +92,13 @@ def verificar_status_assinatura(email: str) -> bool:
         return True
 
 
-    # 2. Consulta banco local (preferencial — atualizado pelo webhook)
+    # 2. Usuário com créditos de consulta avulsa disponíveis (Pay-per-search)
+    creditos = repository.obter_creditos_consulta(email_clean)
+    if creditos > 0:
+        logger.debug(f"Usuário {email_clean} possui {creditos} crédito(s) de consulta avulsa.")
+        return True
+
+    # 3. Consulta banco local (preferencial — atualizado pelo webhook)
     assinatura = repository.consultar_assinatura(email)
     if assinatura:
         status = assinatura.get("status", "")
@@ -102,6 +108,7 @@ def verificar_status_assinatura(email: str) -> bool:
         elif status in ("canceled", "past_due", "unpaid"):
             logger.info(f"Assinatura inativa no DB: {email} -> {status}")
             return False
+
 
     # 3. Fallback: consulta direta ao Stripe (quando webhook ainda nao processou)
     if settings.STRIPE_API_KEY:

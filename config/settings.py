@@ -39,8 +39,10 @@ BTG_CLIENT_SECRET = os.getenv("BTG_CLIENT_SECRET", "ykQpfphQhf4NEdY7wOVvftKZqhib
 BTG_PIX_CHAVE = os.getenv("BTG_PIX_CHAVE", "62977131000180")
 BTG_BENEFICIARIO_NOME = os.getenv("BTG_BENEFICIARIO_NOME", "MARCELO SANTOS")
 BTG_BENEFICIARIO_CIDADE = os.getenv("BTG_BENEFICIARIO_CIDADE", "BRASILIA")
-BTG_LINK_MONTHLY = os.getenv("BTG_LINK_MONTHLY", "")
-BTG_LINK_YEARLY = os.getenv("BTG_LINK_YEARLY", "")
+BTG_LINK_PER_SEARCH = os.getenv("BTG_LINK_PER_SEARCH", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
+BTG_LINK_MONTHLY = os.getenv("BTG_LINK_MONTHLY", "https://links.btgpactual.com/WqXSDJqTEjdCjfY")
+BTG_LINK_YEARLY = os.getenv("BTG_LINK_YEARLY", "https://links.btgpactual.com/Ky3SiSTzVIQdzp4")
+
 
 
 # --- ANALYTICS & TRACKING (O Erro estava aqui: Faltavam estas linhas) ---
