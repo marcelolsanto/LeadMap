@@ -250,6 +250,48 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# --- PAINEL EXCLUSIVO DO ADMINISTRADOR (LIBERAÇÃO MANUAL DE CLIENTES) ---
+if is_admin:
+    with st.expander("👑 **PAINEL ADMIN: Liberar Acesso para Cliente / Ver Comprovantes**", expanded=False):
+        col_adm1, col_adm2, col_adm3 = st.columns([3, 2, 2])
+        with col_adm1:
+            email_cliente_liberar = st.text_input("E-mail do Cliente para liberar:", placeholder="cliente@gmail.com", key="adm_email_cliente")
+        with col_adm2:
+            tipo_lib = st.selectbox("Acesso a liberar:", [
+                "1 Consulta Avulsa",
+                "5 Consultas Avulsas",
+                "Plano Mensal (30 dias)",
+                "Plano Anual VIP"
+            ], key="adm_tipo_lib")
+        with col_adm3:
+            st.write("")
+            st.write("")
+            if st.button("✅ Liberar Cliente Agora", type="primary", use_container_width=True, key="btn_adm_liberar"):
+                if email_cliente_liberar and "@" in email_cliente_liberar:
+                    target_email = email_cliente_liberar.strip().lower()
+                    if "1 Consulta" in tipo_lib:
+                        repository.adicionar_creditos_consulta(target_email, 1)
+                        st.success(f"✅ 1 Consulta liberada para {target_email}!")
+                    elif "5 Consultas" in tipo_lib:
+                        repository.adicionar_creditos_consulta(target_email, 5)
+                        st.success(f"✅ 5 Consultas liberadas para {target_email}!")
+                    elif "Mensal" in tipo_lib:
+                        repository.salvar_assinatura(target_email, "active", "admin_manual", "mensal", "vitalicio")
+                        st.success(f"✅ Plano Mensal liberado para {target_email}!")
+                    else:
+                        repository.salvar_assinatura(target_email, "active", "admin_manual", "anual", "vitalicio")
+                        st.success(f"✅ Plano Anual VIP liberado para {target_email}!")
+                    audit_service.log_console("ADMIN", f"Marcelo liberou {tipo_lib} para {target_email}")
+                else:
+                    st.error("Digite um e-mail válido!")
+
+        comprovantes_recentes = repository.listar_comprovantes(limite=5)
+        if comprovantes_recentes:
+            st.markdown("##### 📄 Últimos Comprovantes / Desbloqueios Registrados:")
+            for comp in comprovantes_recentes:
+                st.caption(f"📅 **{comp.get('data_hora')}** — 👤 `{comp.get('email')}` — 🎯 {comp.get('tipo_plano')} — Doc: `{comp.get('arquivo_comprovante') or comp.get('codigo_transacao') or 'OK'}`")
+
+
 
 # ========================================================
 # TELA 1: INICIO

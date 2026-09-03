@@ -153,10 +153,23 @@ def init_dbs():
                 atualizado_em TEXT
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS comprovantes_pagamento (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                data_hora TEXT,
+                email TEXT,
+                tipo_plano TEXT,
+                codigo_transacao TEXT,
+                arquivo_comprovante TEXT,
+                status TEXT
+            )
+        """)
         conn.commit()
         conn.close()
+        os.makedirs("data/comprovantes", exist_ok=True)
     except Exception as e:
         logger.error(f"Erro ao iniciar Tabelas de Acesso: {e}", exc_info=True)
+
 
 
 
@@ -440,5 +453,43 @@ def consumir_credito_consulta(email: str) -> bool:
     except Exception as e:
         logger.error(f"Erro ao consumir crédito de consulta para {email}: {e}")
         return False
+
+
+# --- GESTÃO DE COMPROVANTES DE PAGAMENTO ---
+
+def salvar_comprovante_pagamento(email: str, tipo_plano: str, codigo_transacao: str = "", arquivo_nome: str = "") -> bool:
+    """Registra o envio de comprovante de pagamento pelo cliente."""
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        _enable_wal(conn)
+        cursor = conn.cursor()
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("""
+            INSERT INTO comprovantes_pagamento (data_hora, email, tipo_plano, codigo_transacao, arquivo_comprovante, status)
+            VALUES (?, ?, ?, ?, ?, 'aprovado_automatico')
+        """, (agora, email.strip().lower(), tipo_plano, codigo_transacao, arquivo_nome))
+        conn.commit()
+        conn.close()
+        logger.info(f"Comprovante registrado para {email} (Plano: {tipo_plano})")
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao salvar comprovante: {e}")
+        return False
+
+
+def listar_comprovantes(limite: int = 50) -> list[dict]:
+    """Lista os últimos comprovantes enviados para visualização do administrador."""
+    try:
+        conn = sqlite3.connect(DB_LOGS)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM comprovantes_pagamento ORDER BY id DESC LIMIT ?", (limite,))
+        rows = [dict(r) for r in cursor.fetchall()]
+        conn.close()
+        return rows
+    except Exception as e:
+        logger.error(f"Erro ao listar comprovantes: {e}")
+        return []
+
 
 

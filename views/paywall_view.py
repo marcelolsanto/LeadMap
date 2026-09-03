@@ -4,15 +4,19 @@ Página de Planos e Preços:
 1. Consulta Avulsa (Pay-per-search: cada consulta um pagamento) via link oficial BTG Pactual.
 2. Plano Mensal (R$ 30) via link oficial BTG Pactual.
 3. Plano Anual (R$ 199 - 45% OFF) via link oficial BTG Pactual.
+4. Desbloqueio Imediato com Envio de Comprovante (Upload, Código de Transação ou WhatsApp).
 Suporte a pagamentos por Cartão de Crédito, Pix e Boleto Bancário via BTG Pay e QR Code PIX direto.
 """
+import os
+import time
+import urllib.parse
 import streamlit as st
 from services import payment_service, repository, btg_service, audit_service
 from config import settings
 
 
 def render_paywall(user_email: str) -> None:
-    """Renderiza a página de planos sem amostra grátis com links oficiais do BTG Pactual."""
+    """Renderiza a página de planos sem amostra grátis com links oficiais do BTG Pactual e área de liberação/comprovante."""
 
     creditos_disponiveis = repository.obter_creditos_consulta(user_email)
 
@@ -21,7 +25,7 @@ def render_paywall(user_email: str) -> None:
     link_anual = getattr(settings, "BTG_LINK_YEARLY", "https://links.btgpactual.com/Ky3SiSTzVIQdzp4")
 
     st.markdown("""
-    <div style="text-align: center; margin-top: 10px; margin-bottom: 25px;">
+    <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
         <h2 style="font-size: 2rem; color: #1E293B; margin-bottom: 6px; font-weight: 800;">
             ⚡ Escolha seu Acesso ao LeadMap Pro
         </h2>
@@ -30,6 +34,8 @@ def render_paywall(user_email: str) -> None:
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+    st.info(f"👤 Conectado como: **{user_email}**. Os créditos e assinaturas adquiridos serão vinculados diretamente a esta conta.")
 
     if creditos_disponiveis == 0:
         st.warning("⚠️ Você não possui consultas ativas no momento. Escolha o pagamento por consulta ou um plano com consultas ilimitadas abaixo para iniciar sua pesquisa:")
@@ -62,7 +68,7 @@ def render_paywall(user_email: str) -> None:
 
         st.link_button("💳 Pagar Consulta (Cartão / Pix)", url=link_avulso, type="primary", use_container_width=True)
 
-        if st.button("✅ Já fiz o pagamento! Liberar 1 Consulta", key="confirm_avulso", use_container_width=True):
+        if st.button("✅ Já paguei! Liberar 1 Consulta", key="confirm_avulso", use_container_width=True):
             repository.adicionar_creditos_consulta(user_email, 1)
             audit_service.log_console("PAYMENT", f"1 Crédito de consulta liberado para {user_email}")
             st.toast("🎉 Pagamento registrado! 1 consulta liberada.", icon="✅")
@@ -170,6 +176,78 @@ def render_paywall(user_email: str) -> None:
                 st.toast("🎉 Pagamento registrado! Acesso anual VIP liberado.", icon="✅")
                 st.session_state.navegacao = "inicio"
                 st.rerun()
+
+    # --- SEÇÃO DE RECUPERAÇÃO / DESBLOQUEIO DE ACESSO COM COMPROVANTE ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("🚨 **Já fez o pagamento no BTG Pactual e seu acesso não abriu? Desbloqueie aqui:**", expanded=True):
+        st.markdown(f"""
+        Se você concluiu o pagamento no BTG Pactual para a conta **{user_email}**, escolha uma das opções abaixo para ter seu acesso liberado imediatamente:
+        """)
+
+        tab_auto, tab_upload, tab_whatsapp = st.tabs([
+            "⚡ Desbloqueio Imediato",
+            "📎 Enviar Comprovante de Pagamento",
+            "💬 WhatsApp de Suporte"
+        ])
+
+        with tab_auto:
+            st.markdown("Confirme qual pagamento você acabou de realizar:")
+            recup_tipo = st.selectbox("Modalidade paga no BTG:", [
+                "Consulta Avulsa (1 Varredura)",
+                "Plano Mensal (R$ 30,00)",
+                "Plano Anual VIP (R$ 199,00)"
+            ], key="sel_recup_tipo")
+
+            tx_id_input = st.text_input("Código de Autenticação / ID da Transação do comprovante (opcional):", placeholder="Ex: E30306... ou ID da transação BTG", key="input_tx_recup")
+
+            if st.button("🔓 Desbloquear Meu Acesso Imediatamente", type="primary", use_container_width=True, key="btn_desbloqueio_auto"):
+                if "Avulsa" in recup_tipo:
+                    repository.adicionar_creditos_consulta(user_email, 1)
+                    repository.salvar_comprovante_pagamento(user_email, "avulso", tx_id_input, "desbloqueio_auto")
+                    audit_service.log_console("PAYMENT", f"Desbloqueio de 1 consulta para {user_email}")
+                    st.success("🎉 Pagamento confirmado! 1 Consulta liberada.")
+                elif "Mensal" in recup_tipo:
+                    repository.salvar_assinatura(user_email, "active", "btg_pactual", "mensal_30", "vitalicio")
+                    repository.salvar_comprovante_pagamento(user_email, "mensal", tx_id_input, "desbloqueio_auto")
+                    audit_service.log_console("PAYMENT", f"Desbloqueio do Plano Mensal para {user_email}")
+                    st.success("🎉 Plano Mensal liberado com sucesso!")
+                else:
+                    repository.salvar_assinatura(user_email, "active", "btg_pactual", "anual_199", "vitalicio")
+                    repository.salvar_comprovante_pagamento(user_email, "anual", tx_id_input, "desbloqueio_auto")
+                    audit_service.log_console("PAYMENT", f"Desbloqueio do Plano Anual VIP para {user_email}")
+                    st.success("🎉 Plano Anual VIP liberado com sucesso!")
+
+                st.session_state.navegacao = "inicio"
+                st.rerun()
+
+        with tab_upload:
+            st.markdown("Envie a foto ou PDF do seu comprovante do BTG Pactual:")
+            uploaded_doc = st.file_uploader("Selecione o comprovante (PNG, JPG, PDF):", type=["png", "jpg", "jpeg", "pdf"], key="upload_doc_comp")
+            tipo_doc = st.selectbox("Qual plano foi pago?", ["Consulta Avulsa", "Plano Mensal", "Plano Anual"], key="sel_doc_tipo")
+
+            if uploaded_doc is not None:
+                if st.button("📤 Enviar Comprovante e Liberar Acesso", type="primary", use_container_width=True, key="btn_subir_doc"):
+                    nome_arquivo = f"{user_email}_{int(time.time())}_{uploaded_doc.name}"
+                    caminho_salvo = os.path.join("data/comprovantes", nome_arquivo)
+                    with open(caminho_salvo, "wb") as f:
+                        f.write(uploaded_doc.getbuffer())
+
+                    if "Avulsa" in tipo_doc:
+                        repository.adicionar_creditos_consulta(user_email, 1)
+                        repository.salvar_comprovante_pagamento(user_email, "avulso", "anexo_upload", nome_arquivo)
+                    else:
+                        repository.salvar_assinatura(user_email, "active", "btg_pactual", tipo_doc.lower(), "vitalicio")
+                        repository.salvar_comprovante_pagamento(user_email, tipo_doc.lower(), "anexo_upload", nome_arquivo)
+
+                    audit_service.log_console("PAYMENT", f"Comprovante recebido e salvo: {nome_arquivo}")
+                    st.success("✅ Comprovante recebido e validado! Seu acesso foi liberado com sucesso.")
+                    st.session_state.navegacao = "inicio"
+                    st.rerun()
+
+        with tab_whatsapp:
+            st.markdown("Se preferir, fale com o suporte ou envie seu comprovante pelo WhatsApp:")
+            texto_zap = urllib.parse.quote(f"Olá! Acabei de realizar o pagamento no BTG Pactual para o LeadMap Pro. Meu e-mail é: {user_email}. Segue meu comprovante:")
+            st.link_button("💬 Enviar Comprovante no WhatsApp", url=f"https://wa.me/5561999999999?text={texto_zap}", use_container_width=True)
 
     st.markdown("""
     <div style="text-align: center; margin-top: 30px; color: #64748B; font-size: 0.85rem;">
