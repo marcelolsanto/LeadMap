@@ -21,7 +21,8 @@ def gerar_link_autorizacao_btg(redirect_uri: str = None) -> str:
     """
     base = "https://id.btgpactual.com/oauth2/authorize"
     r_uri = redirect_uri or getattr(settings, "REDIRECT_URI", "http://localhost:8501")
-    client_id = getattr(settings, "BTG_CLIENT_ID", "b8bc88f5-7461-4817-b3d3-cd8a23edf6b8")
+    client_id = getattr(settings, "BTG_CLIENT_ID", "3293bc2c-676c-477c-8c7b-5aaf4eddecf0")
+
 
     params = {
         "response_type": "code",
