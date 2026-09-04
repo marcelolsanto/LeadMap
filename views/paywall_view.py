@@ -97,6 +97,25 @@ def render_paywall(user_email: str) -> None:
             st.session_state.navegacao = "inicio"
             st.rerun()
 
+        with st.popover("⚡ Pagar Consulta no Pix Direto", use_container_width=True):
+            st.markdown("### ⚡ Pagamento de Consulta via PIX")
+            st.caption("Recebimento direto na conta **BTG Pactual**")
+            pix_c = btg_service.gerar_pix_copia_cola(5.00, txid="CONSULTA")
+            qr_url_c = btg_service.gerar_qr_code_url(pix_c)
+            st.image(qr_url_c, width=200)
+            st.text_area("📋 Código Pix Copia e Cola:", value=pix_c, height=70, key="pix_area_c")
+            st.caption("Chave Pix direta (CNPJ): `62.977.131/0001-80`")
+            st.info("Abra o app de qualquer banco, faça o Pix para a chave CNPJ e confirme abaixo para liberar sua varredura:")
+
+            if st.button("✅ Já fiz o Pix da Consulta! Liberar", key="confirm_pix_c", type="primary", use_container_width=True):
+                repository.adicionar_creditos_consulta(user_email, 1)
+                repository.salvar_comprovante_pagamento(user_email, "avulso", "pix_direto", "liberado_usuario")
+                audit_service.log_console("PAYMENT", f"1 Crédito liberado via Pix Direto para {user_email}")
+                st.toast("🎉 1 Consulta liberada com sucesso!", icon="✅")
+                st.session_state.navegacao = "inicio"
+                st.rerun()
+
+
     # --- CARD 2: MENSAL ---
     with col2:
         st.markdown("""
