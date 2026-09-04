@@ -15,6 +15,11 @@ from services import payment_service, repository, btg_service, audit_service
 from config import settings
 
 
+def _clean_html(html_str: str) -> str:
+    """Remove indentação linha a linha para evitar blocos <pre><code> do Markdown."""
+    return "\n".join(line.lstrip() for line in html_str.splitlines())
+
+
 def render_paywall(user_email: str) -> None:
     """Renderiza a página de planos sem amostra grátis com links oficiais do BTG Pactual e área de liberação/comprovante."""
 
@@ -24,7 +29,19 @@ def render_paywall(user_email: str) -> None:
     link_mensal = getattr(settings, "BTG_LINK_MONTHLY", "https://links.btgpactual.com/WqXSDJqTEjdCjfY")
     link_anual = getattr(settings, "BTG_LINK_YEARLY", "https://links.btgpactual.com/Ky3SiSTzVIQdzp4")
 
-    st.markdown("""
+    # Barra superior com identificação e opção de trocar de conta / sair
+    header_bar = f"""
+    <div style="display:flex; justify-content:space-between; align-items:center; padding: 10px 0; border-bottom:1px solid #e2e8f0; margin-bottom:20px;">
+        <span style="font-weight:bold; color:#2563eb; font-size:1.2rem;">LeadMap Pro</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:0.85rem; color:#64748b;">👤 Conectado como: <strong>{user_email}</strong></span>
+            <a href="?logout=true" target="_self" style="font-size:0.8rem; color:#dc2626; font-weight:600; text-decoration:none; border:1px solid #fca5a5; padding:4px 10px; border-radius:6px; background:#fff1f2;">Trocar de Conta / Sair</a>
+        </div>
+    </div>
+    """
+    st.markdown(_clean_html(header_bar), unsafe_allow_html=True)
+
+    title_html = """
     <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
         <h2 style="font-size: 2rem; color: #1E293B; margin-bottom: 6px; font-weight: 800;">
             ⚡ Escolha seu Acesso ao LeadMap Pro
@@ -33,7 +50,9 @@ def render_paywall(user_email: str) -> None:
             Escale sua prospecção B2B com mineração profunda de contatos, WhatsApp direto, e-mails com ping no servidor e inteligência fiscal.
         </p>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(_clean_html(title_html), unsafe_allow_html=True)
+
 
     st.info(f"👤 Conectado como: **{user_email}**. Os créditos e assinaturas adquiridos serão vinculados diretamente a esta conta.")
 
