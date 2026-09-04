@@ -6,6 +6,7 @@ Cards Interativos, Responsivos, WhatsApp direto, Maps exato, E-mail validado, Re
 import streamlit as st
 import pandas as pd
 import urllib.parse
+import re
 from datetime import datetime
 
 from services import export_service, contact_service, audit_service
@@ -159,7 +160,18 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
             email_valido = lead_dict.get('Email_Valido') or ''
 
             endereco = str(lead_dict.get('Endereço') or lead_dict.get('Endereco') or 'Endereço não informado')
-            if endereco in ('nan', 'None', ''): endereco = 'Endereço não informado'
+            if endereco in ('nan', 'None', ''):
+                endereco = 'Endereço não informado'
+            elif endereco != 'Endereço não informado':
+                endereco = re.sub(r'[\ue000-\uf8ff]', '', endereco)
+                endereco = re.sub(r'\b\d+[\.,]\d+\b\s*(\(\d+\))?', '', endereco)
+                endereco = re.sub(r'Fecha(\s+(às|as))?\s+\d{1,2}:\d{2}', '', endereco, flags=re.IGNORECASE)
+                endereco = re.sub(r'Aberto(\s+agora)?', '', endereco, flags=re.IGNORECASE)
+                endereco = re.sub(r'Rotas(\s*↗)?', '', endereco, flags=re.IGNORECASE)
+                endereco = re.sub(r'·|⋅|•', ' ', endereco)
+                endereco = re.sub(r'\s+', ' ', endereco).strip(" ,.-")
+                if not endereco:
+                    endereco = 'Endereço não informado'
 
             maps_url = lead_dict.get('Google_Maps_Url') or ''
             if not maps_url and endereco != 'Endereço não informado':
@@ -177,72 +189,100 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
             site = str(lead_dict.get('Site') or '')
             if site in ('nan', 'None', 'Nao possui'): site = ''
 
-            # Botões de ação em HTML com estilos inline (garante renderização impecável)
-            btn_wa_html = f"<a href='{whatsapp_url}' target='_blank' style='background-color:#25D366; color:#ffffff !important; font-weight:700; font-size:0.9rem; padding:8px 16px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(37,211,102,0.3); margin-right:8px; margin-bottom:8px;'>💬 Conversar no WhatsApp</a>" if whatsapp_url else ""
-            btn_mail_html = f"<a href='mailto:{email}' style='background-color:#2563EB; color:#ffffff !important; font-weight:700; font-size:0.9rem; padding:8px 16px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(37,99,235,0.3); margin-right:8px; margin-bottom:8px;'>✉️ Enviar E-mail</a>" if email else ""
-            btn_maps_html = f"<a href='{maps_url}' target='_blank' style='background-color:#0284C7; color:#ffffff !important; font-weight:700; font-size:0.9rem; padding:8px 16px; border-radius:8px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(2,132,199,0.3); margin-right:8px; margin-bottom:8px;'>📍 Abrir no Google Maps</a>" if maps_url else ""
+            # Badge de qualificação do lead
+            if email and whatsapp_url:
+                badge_lead_html = "<span style='background-color:#F0FDF4; color:#15803D; border:1px solid #BBF7D0; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; text-decoration:none !important; white-space:nowrap;'>✨ Contato Completo</span>"
+            elif whatsapp_url:
+                badge_lead_html = "<span style='background-color:#F0FDF4; color:#16A34A; border:1px solid #BBF7D0; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; text-decoration:none !important; white-space:nowrap;'>💬 WhatsApp Ativo</span>"
+            else:
+                badge_lead_html = "<span style='background-color:#F8FAFC; color:#475569; border:1px solid #E2E8F0; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; text-decoration:none !important; white-space:nowrap;'>🏢 Lead Qualificado</span>"
 
-            badge_email_html = f"<span style='background-color:#DEF7EC; color:#03543F; padding:3px 8px; border-radius:9999px; font-size:0.75rem; font-weight:600; margin-left:6px;'>{email_valido}</span>" if (email and email_valido and "Servidor" in email_valido) else ""
+            # Badge de validação do e-mail
+            badge_email_html = f"<span style='background-color:#DEF7EC; color:#03543F; border:1px solid #A7F3D0; padding:2px 8px; border-radius:9999px; font-size:0.72rem; font-weight:600; margin-left:6px; text-decoration:none !important;'>{email_valido}</span>" if (email and email_valido and "Servidor" in email_valido) else ""
 
-            maps_link_html = f"<a href='{maps_url}' target='_blank' style='color:#1D4ED8; text-decoration:underline; font-weight:500;'>📍 {endereco} ↗</a>" if maps_url else f"📍 {endereco}"
+            # Linha de Endereço com link elegante para Google Maps (sem sublinhado)
+            if maps_url:
+                maps_row = f"""<div style="display:flex; align-items:flex-start; gap:8px; margin-bottom:8px;">
+<span style="font-size:1rem; line-height:1.4;">📍</span>
+<div style="flex:1;">
+<a href="{maps_url}" target="_blank" title="Abrir localização no Google Maps" style="text-decoration:none !important; color:#334155; font-size:0.9rem; line-height:1.4; display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px;">
+<span style="text-decoration:none !important;">{endereco}</span>
+<span style="color:#0284C7; font-size:0.78rem; font-weight:600; background:#E0F2FE; border:1px solid #BAE6FD; padding:1px 7px; border-radius:6px; text-decoration:none !important;">🗺️ Ver no Maps ↗</span>
+</a>
+</div>
+</div>"""
+            else:
+                maps_row = f"""<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; color:#64748B; font-size:0.9rem;">
+<span>📍</span> <span>{endereco}</span>
+</div>"""
 
-            # Redes sociais chips com estilos inline
-            social_chips_html = ""
-            if insta and 'instagram.com' in insta:
-                social_chips_html += f"<a href='{insta}' target='_blank' style='background-color:#FDF2F8; color:#DB2777 !important; border:1px solid #FBCFE8; padding:5px 12px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-right:6px; margin-bottom:6px;'>📸 Instagram</a>"
-            if face and ('facebook.com' in face or 'fb.com' in face):
-                social_chips_html += f"<a href='{face}' target='_blank' style='background-color:#EFF6FF; color:#1D4ED8 !important; border:1px solid #BFDBFE; padding:5px 12px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-right:6px; margin-bottom:6px;'>📘 Facebook</a>"
-            if linkin and 'linkedin.com' in linkin:
-                social_chips_html += f"<a href='{linkin}' target='_blank' style='background-color:#F0F9FF; color:#0284C7 !important; border:1px solid #BAE6FD; padding:5px 12px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-right:6px; margin-bottom:6px;'>💼 LinkedIn</a>"
+            # Linha de Telefone / WhatsApp direto ao clicar no número (sem sublinhado)
+            if whatsapp_url:
+                telefone_row = f"""<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+<span style="font-size:1rem;">📞</span>
+<a href="{whatsapp_url}" target="_blank" title="Clique para enviar mensagem via WhatsApp" style="text-decoration:none !important; color:#0F172A; font-weight:600; font-size:0.92rem; display:inline-flex; align-items:center; gap:8px;">
+<span style="text-decoration:none !important;">{telefone}</span>
+<span style="background-color:#DCFCE7; color:#15803D; border:1px solid #86EFAC; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:600; text-decoration:none !important;">💬 Iniciar WhatsApp ↗</span>
+</a>
+</div>"""
+            elif telefone:
+                telefone_row = f"""<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:0.9rem; color:#334155;">
+<span>📞</span> <span style="font-weight:600;">{telefone}</span>
+</div>"""
+            else:
+                telefone_row = """<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:0.88rem; color:#94A3B8; font-style:italic;">
+<span>📞</span> <span>Telefone não informado</span>
+</div>"""
+
+            # Linha de E-mail com link mailto direto (sem sublinhado)
+            if email:
+                email_row = f"""<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+<span style="font-size:1rem;">✉️</span>
+<a href="mailto:{email}" title="Clique para redigir e-mail" style="text-decoration:none !important; color:#2563EB; font-weight:500; font-size:0.92rem; display:inline-flex; align-items:center; gap:6px;">
+<span style="text-decoration:none !important;">{email}</span>
+<span style="color:#64748B; font-size:0.78rem; text-decoration:none !important;">(Enviar E-mail ↗)</span>
+</a>
+{badge_email_html}
+</div>"""
+            else:
+                email_row = """<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:0.88rem; color:#94A3B8; font-style:italic;">
+<span>✉️</span> <span>E-mail não informado</span>
+</div>"""
+
+            # Chips de Redes Sociais e Website (estilo discreto e institucional, sem sublinhado)
+            chips_list = []
             if site and site.startswith('http'):
-                social_chips_html += f"<a href='{site}' target='_blank' style='background-color:#F0FDF4; color:#15803D !important; border:1px solid #BBF7D0; padding:5px 12px; border-radius:20px; font-size:0.82rem; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-right:6px; margin-bottom:6px;'>🌐 Site Oficial</a>"
+                chips_list.append(f"<a href='{site}' target='_blank' style='text-decoration:none !important; color:#1E293B !important; background:#F8FAFC; border:1px solid #CBD5E1; padding:4px 12px; border-radius:6px; font-size:0.8rem; font-weight:500; display:inline-flex; align-items:center; gap:5px;'>🌐 Site Oficial ↗</a>")
+            if insta and 'instagram.com' in insta:
+                chips_list.append(f"<a href='{insta}' target='_blank' style='text-decoration:none !important; color:#9D174D !important; background:#FDF2F8; border:1px solid #FBCFE8; padding:4px 12px; border-radius:6px; font-size:0.8rem; font-weight:500; display:inline-flex; align-items:center; gap:5px;'>📸 Instagram ↗</a>")
+            if linkin and 'linkedin.com' in linkin:
+                chips_list.append(f"<a href='{linkin}' target='_blank' style='text-decoration:none !important; color:#0369A1 !important; background:#F0F9FF; border:1px solid #BAE6FD; padding:4px 12px; border-radius:6px; font-size:0.8rem; font-weight:500; display:inline-flex; align-items:center; gap:5px;'>💼 LinkedIn ↗</a>")
+            if face and ('facebook.com' in face or 'fb.com' in face):
+                chips_list.append(f"<a href='{face}' target='_blank' style='text-decoration:none !important; color:#1D4ED8 !important; background:#EFF6FF; border:1px solid #BFDBFE; padding:4px 12px; border-radius:6px; font-size:0.8rem; font-weight:500; display:inline-flex; align-items:center; gap:5px;'>📘 Facebook ↗</a>")
 
+            social_row = f"""<div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid #F1F5F9;">{''.join(chips_list)}</div>""" if chips_list else ""
+
+            # Metadados CNPJ e Razão Social
             cnpj_text = f"📄 <strong>CNPJ:</strong> {cnpj}" if cnpj else ""
             if razao and razao != nome:
                 cnpj_text += f" &nbsp;•&nbsp; <em>{razao}</em>"
+            cnpj_line = f"<div style='color:#64748B; font-size:0.84rem; margin-top:4px;'>{cnpj_text}</div>" if cnpj_text else ""
 
-            telefone_line = f"<p style='margin:4px 0;'>📞 <strong>Telefone:</strong> {telefone}</p>" if telefone else ""
-            email_line = f"<p style='margin:4px 0;'>📧 <strong>E-mail:</strong> {email} {badge_email_html}</p>" if email else ""
-            actions_row = f"<div style='margin: 12px 0;'>{btn_wa_html}{btn_mail_html}{btn_maps_html}</div>" if (btn_wa_html or btn_mail_html or btn_maps_html) else ""
-            social_row = f"<div style='margin-top:6px;'>{social_chips_html}</div>" if social_chips_html else ""
-
-            # Card sem nenhuma indentação em cada linha para evitar bloco de código markdown
-            card_html = f"""<div style="background-color:#ffffff; border-radius:14px; padding:20px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.08); border-left:6px solid #2563EB; border-top:1px solid #f1f5f9; border-right:1px solid #f1f5f9; border-bottom:1px solid #f1f5f9;">
-<div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #E2E8F0; padding-bottom:10px; margin-bottom:12px;">
-<div>
-<h3 style="margin:0; color:#1E293B; font-size:1.25rem; font-weight:700;">🏢 {nome}</h3>
-<div style="color:#64748B; font-size:0.85rem; margin-top:3px;">{cnpj_text}</div>
+            # Card institucional completo
+            card_html = f"""<div style="background-color:#FFFFFF; border-radius:12px; padding:20px 24px; margin-bottom:16px; border:1px solid #E2E8F0; border-left:5px solid #2563EB; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+<div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #F1F5F9; padding-bottom:12px; margin-bottom:14px; gap:12px;">
+<div style="flex:1;">
+<h3 style="margin:0; color:#0F172A; font-size:1.18rem; font-weight:700; line-height:1.3;">🏢 {nome}</h3>
+{cnpj_line}
 </div>
-<span style="background-color:#DEF7EC; color:#03543F; padding:4px 10px; border-radius:9999px; font-size:0.75rem; font-weight:600;">Lead Qualificado</span>
+{badge_lead_html}
 </div>
-<div style="margin-bottom:10px; font-size:0.92rem; line-height:1.5;">
-<p style="margin:4px 0;">{maps_link_html}</p>
-{telefone_line}
-{email_line}
+<div style="font-size:0.92rem; line-height:1.5;">
+{maps_row}
+{telefone_row}
+{email_row}
 </div>
-{actions_row}
 {social_row}
 </div>"""
 
             st.markdown(_clean_html(card_html), unsafe_allow_html=True)
-
-            # Ações individuais Streamlit: vCard e Salvar no Google Contacts
-            col_c1, col_c2, _ = st.columns([1.5, 1.8, 3.5])
-            with col_c1:
-                vcf_card = export_service.gerar_vcf_individual(lead_dict)
-                slug_nome = "".join(c for c in nome if c.isalnum() or c == "_")[:20]
-                st.download_button(
-                    label="📇 Baixar .VCF",
-                    data=vcf_card,
-                    file_name=f"{slug_nome}.vcf",
-                    mime="text/vcard",
-                    key=f"dl_vcf_{index}"
-                )
-            with col_c2:
-                if creds:
-                    if st.button("📲 Salvar na Agenda Google", key=f"btn_sync_{index}"):
-                        ok = contact_service.salvar_contato(creds, lead_dict)
-                        if ok:
-                            st.toast(f"✅ '{nome}' adicionado à sua Agenda Google!", icon="🎉")
-                        else:
-                            st.error("Erro ao salvar contato no Google.")

@@ -6,23 +6,25 @@ def limpar_endereco(texto_completo, nome, telefone):
     texto = texto_completo.replace(nome, "").replace(telefone, "")
 
     # 2. Normaliza quebras de linha e pontos de separação
-    texto = texto.replace("\n", " ").replace("·", "").replace("⋅", "").strip()
+    texto = texto.replace("\n", " ").replace("·", " ").replace("⋅", " ").replace("•", " ").strip()
 
     # 3. Regex Poderoso para remover "lixo" do Google Maps
-    # Adicionamos: "Aberto", "Fecha às", horários, parênteses de avaliação (120)
+    # Adicionamos: "Aberto", "Fecha às", horários, parênteses de avaliação (120), Rotas, ícones
     padroes_remocao = [
         r"Anúncio",
         r"Patrocinado",
-        r"Aberto( agora)?",  # Pega "Aberto" ou "Aberto agora"
-        r"Fecha (às|as) \d{1,2}:\d{2}",  # Pega "Fecha às 22:00"
+        r"Aberto(\s+agora)?",
+        r"Fecha(\s+(às|as))?\s+\d{1,2}:\d{2}",
         r"Fechado",
         r"copiar endereço",
         r"Avaliação",
         r"comentários?",
-        r"Opções de serviço:.*",  # Pega tudo depois de "Opções de serviço"
-        r"\d\.\d\s*\(\d+\)",  # Pega nota ex: "4.8 (120)"
+        r"Opções de serviço:.*",
+        r"Rotas(\s*↗)?",
+        r"\b\d+[\.,]\d+\b\s*(\(\d+\))?",  # Pega nota ex: "4.8 (120)" ou "3,0"
         r"Compras na loja",
-        r"Entrega"
+        r"Entrega",
+        r"[\ue000-\uf8ff]",  # Caracteres unicode especiais de ícones (ex: )
     ]
 
     regex_final = "|".join(padroes_remocao)
