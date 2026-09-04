@@ -24,14 +24,15 @@ SCOPES = [
 
 ARQUIVO_LOG = "auditoria_leadmap.csv"
 
-# Stripe Settings
-STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
-STRIPE_PRICE_MONTHLY = os.getenv("STRIPE_PRICE_MONTHLY")
-STRIPE_PRICE_YEARLY = os.getenv("STRIPE_PRICE_YEARLY")
-STRIPE_CHECKOUT_URL_MONTHLY = os.getenv("STRIPE_CHECKOUT_URL_MONTHLY")
-STRIPE_CHECKOUT_URL_YEARLY = os.getenv("STRIPE_CHECKOUT_URL_YEARLY")
-STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-BASE_URL = os.getenv("REDIRECT_URI", "http://localhost:8501")
+# Links Oficiais de Pagamento (PagBank & BTG Pactual)
+LINK_PAGAMENTO_AVULSO = os.getenv("LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
+LINK_PAGAMENTO_MENSAL = os.getenv("LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QRApG9")
+LINK_PAGAMENTO_ANUAL = os.getenv("LINK_PAGAMENTO_ANUAL", "https://pag.ae/827QSc4HM")
+
+# Compatibilidade retroativa
+BTG_LINK_PER_SEARCH = LINK_PAGAMENTO_AVULSO
+BTG_LINK_MONTHLY = LINK_PAGAMENTO_MENSAL
+BTG_LINK_YEARLY = LINK_PAGAMENTO_ANUAL
 
 # BTG Pactual API & PIX Settings
 BTG_CLIENT_ID = os.getenv("BTG_CLIENT_ID", "b8bc88f5-7461-4817-b3d3-cd8a23edf6b8")
@@ -39,9 +40,7 @@ BTG_CLIENT_SECRET = os.getenv("BTG_CLIENT_SECRET", "ykQpfphQhf4NEdY7wOVvftKZqhib
 BTG_PIX_CHAVE = os.getenv("BTG_PIX_CHAVE", "62977131000180")
 BTG_BENEFICIARIO_NOME = os.getenv("BTG_BENEFICIARIO_NOME", "MARCELO SANTOS")
 BTG_BENEFICIARIO_CIDADE = os.getenv("BTG_BENEFICIARIO_CIDADE", "BRASILIA")
-BTG_LINK_PER_SEARCH = os.getenv("BTG_LINK_PER_SEARCH", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
-BTG_LINK_MONTHLY = os.getenv("BTG_LINK_MONTHLY", "https://links.btgpactual.com/WqXSDJqTEjdCjfY")
-BTG_LINK_YEARLY = os.getenv("BTG_LINK_YEARLY", "https://links.btgpactual.com/Ky3SiSTzVIQdzp4")
+
 
 
 
