@@ -16,12 +16,12 @@ def criar_sessao_checkout(email_usuario: str, tipo_plano: str = "mensal") -> str
     logger.info(f"Obtendo link de pagamento para {email_usuario}. Plano: {tipo_plano}")
 
     if tipo_plano == "anual":
-        return getattr(settings, "LINK_PAGAMENTO_ANUAL", "https://pag.ae/827Q-PJBa")
+        return getattr(settings, "LINK_PAGAMENTO_ANUAL", "https://pag.ae/827QSc4HM")
     elif tipo_plano == "avulso":
 
         return getattr(settings, "LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
     else:
-        return getattr(settings, "LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QZfzcL")
+        return getattr(settings, "LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QRApG9")
 
 
 
