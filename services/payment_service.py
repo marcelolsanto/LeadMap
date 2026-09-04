@@ -18,8 +18,7 @@ def criar_sessao_checkout(email_usuario: str, tipo_plano: str = "mensal") -> str
     if tipo_plano == "anual":
         return getattr(settings, "LINK_PAGAMENTO_ANUAL", "https://pag.ae/827QSc4HM")
     elif tipo_plano == "avulso":
-
-        return getattr(settings, "LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
+        return getattr(settings, "LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/xb6gXBfTZ0IMOMa")
     else:
         return getattr(settings, "LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QRApG9")
 

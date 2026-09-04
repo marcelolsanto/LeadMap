@@ -92,8 +92,9 @@ def _criar_app():
                 if email_comprador and "@" in str(email_comprador):
                     email_clean = str(email_comprador).strip().lower()
                     # Se for o link de consulta avulsa (ou valor avulso):
-                    if (link_url and "rD8wXVZ0NTPvIOY" in link_url) or (amount and float(amount) < 25):
+                    if (link_url and ("xb6gXBfTZ0IMOMa" in link_url or "rD8wXVZ0NTPvIOY" in link_url)) or (amount and float(amount) < 25):
                         repository.adicionar_creditos_consulta(email_clean, 1)
+
                         logger.info(f"1 Crédito de consulta adicionado via Webhook BTG para {email_clean}")
                     else:
                         repository.salvar_assinatura(

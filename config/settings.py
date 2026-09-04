@@ -25,9 +25,10 @@ SCOPES = [
 ARQUIVO_LOG = "auditoria_leadmap.csv"
 
 # Links Oficiais de Pagamento (PagBank & BTG Pactual)
-LINK_PAGAMENTO_AVULSO = os.getenv("LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
+LINK_PAGAMENTO_AVULSO = os.getenv("LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/xb6gXBfTZ0IMOMa")
 LINK_PAGAMENTO_MENSAL = os.getenv("LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QRApG9")
 LINK_PAGAMENTO_ANUAL = os.getenv("LINK_PAGAMENTO_ANUAL", "https://pag.ae/827QSc4HM")
+
 
 
 

@@ -25,8 +25,9 @@ def render_paywall(user_email: str) -> None:
 
     creditos_disponiveis = repository.obter_creditos_consulta(user_email)
 
-    link_avulso = getattr(settings, "LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
+    link_avulso = getattr(settings, "LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/xb6gXBfTZ0IMOMa")
     link_mensal = getattr(settings, "LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QRApG9")
+
     link_anual = getattr(settings, "LINK_PAGAMENTO_ANUAL", "https://pag.ae/827QSc4HM")
 
 
