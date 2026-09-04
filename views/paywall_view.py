@@ -26,8 +26,9 @@ def render_paywall(user_email: str) -> None:
     creditos_disponiveis = repository.obter_creditos_consulta(user_email)
 
     link_avulso = getattr(settings, "LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
-    link_mensal = getattr(settings, "LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QRApG9")
+    link_mensal = getattr(settings, "LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QZfzcL")
     link_anual = getattr(settings, "LINK_PAGAMENTO_ANUAL", "https://pag.ae/827QSc4HM")
+
 
 
     # Barra superior com identificação e opção de trocar de conta / sair
@@ -119,9 +120,19 @@ def render_paywall(user_email: str) -> None:
         </div>
         """, unsafe_allow_html=True)
 
-        st.link_button("💳 Pagar Mensal (Cartão / Pix)", url=link_mensal, type="primary", use_container_width=True)
+        st.link_button("💳 Assinar Mensal Recorrente (PagBank)", url=link_mensal, type="primary", use_container_width=True)
+        st.markdown("""
+        <div style="text-align: center; margin: 6px 0 10px 0;">
+            <!-- INICIO DO BOTAO PAGBANK -->
+            <a href="https://pag.ae/827QZfzcL/button" target="_blank" title="Pagar com PagBank">
+                <img src="https://assets.pagseguro.com.br/ps-integration-assets/botoes/pagamentos/205x30-pagar.gif" alt="Pague com PagBank - é rápido, grátis e seguro!" style="max-width: 100%; border-radius: 4px;" />
+            </a>
+            <!-- FIM DO BOTAO PAGBANK -->
+        </div>
+        """, unsafe_allow_html=True)
 
         with st.popover("⚡ Pagar R$ 30 no Pix Direto", use_container_width=True):
+
             st.markdown("### ⚡ Pagamento via PIX - R$ 30,00")
             st.caption("Recebimento direto na conta **BTG Pactual**")
             pix_m = btg_service.gerar_pix_copia_cola(30.00, txid="MENSAL")

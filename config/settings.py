@@ -26,8 +26,9 @@ ARQUIVO_LOG = "auditoria_leadmap.csv"
 
 # Links Oficiais de Pagamento (PagBank & BTG Pactual)
 LINK_PAGAMENTO_AVULSO = os.getenv("LINK_PAGAMENTO_AVULSO", "https://links.btgpactual.com/rD8wXVZ0NTPvIOY")
-LINK_PAGAMENTO_MENSAL = os.getenv("LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QRApG9")
+LINK_PAGAMENTO_MENSAL = os.getenv("LINK_PAGAMENTO_MENSAL", "https://pag.ae/827QZfzcL")
 LINK_PAGAMENTO_ANUAL = os.getenv("LINK_PAGAMENTO_ANUAL", "https://pag.ae/827QSc4HM")
+
 
 # Compatibilidade retroativa
 BTG_LINK_PER_SEARCH = LINK_PAGAMENTO_AVULSO
