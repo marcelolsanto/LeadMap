@@ -92,14 +92,8 @@ def render_paywall(user_email: str) -> None:
 
         st.link_button("💳 Pagar Consulta (Cartão / Pix)", url=link_avulso, type="primary", use_container_width=True)
 
-        if st.button("✅ Já paguei! Liberar 1 Consulta", key="confirm_avulso", use_container_width=True):
-            repository.adicionar_creditos_consulta(user_email, 1)
-            audit_service.log_console("PAYMENT", f"1 Crédito de consulta liberado para {user_email}")
-            st.toast("🎉 Pagamento registrado! 1 consulta liberada.", icon="✅")
-            st.session_state.navegacao = "inicio"
-            st.rerun()
-
         with st.popover("⚡ Pagar Consulta no Pix Direto", use_container_width=True):
+
             st.markdown("### ⚡ Pagamento de Consulta via PIX")
             st.caption("Recebimento direto na conta **BTG Pactual**")
             pix_c = btg_service.gerar_pix_copia_cola(5.00, txid="CONSULTA")
@@ -143,18 +137,9 @@ def render_paywall(user_email: str) -> None:
         """, unsafe_allow_html=True)
 
         st.link_button("💳 Pagar Mensal (Cartão / Pix)", url=link_mensal, type="primary", use_container_width=True)
-        st.markdown("""
-        <div style="text-align: center; margin: 6px 0 10px 0;">
-            <!-- INICIO DO BOTAO PAGBANK -->
-            <a href="https://pag.ae/827QRApG9/button" target="_blank" title="Pagar com PagBank">
-                <img src="https://assets.pagseguro.com.br/ps-integration-assets/botoes/pagamentos/205x30-pagar.gif" alt="Pague com PagBank - é rápido, grátis e seguro!" style="max-width: 100%; border-radius: 4px;" />
-            </a>
-            <!-- FIM DO BOTAO PAGBANK -->
-        </div>
-        """, unsafe_allow_html=True)
-
 
         with st.popover("⚡ Pagar R$ 30 no Pix Direto", use_container_width=True):
+
 
             st.markdown("### ⚡ Pagamento via PIX - R$ 30,00")
             st.caption("Recebimento direto na conta **BTG Pactual**")
@@ -207,16 +192,6 @@ def render_paywall(user_email: str) -> None:
         """, unsafe_allow_html=True)
 
         st.link_button("💳 Pagar Anual (Cartão / Pix - 45% OFF)", url=link_anual, type="primary", use_container_width=True)
-        st.markdown("""
-        <div style="text-align: center; margin: 6px 0 10px 0;">
-            <!-- INICIO DO BOTAO PAGBANK -->
-            <a href="https://pag.ae/827QSc4HM/button" target="_blank" title="Pagar com PagBank">
-                <img src="https://assets.pagseguro.com.br/ps-integration-assets/botoes/pagamentos/205x30-pagar.gif" alt="Pague com PagBank - é rápido, grátis e seguro!" style="max-width: 100%; border-radius: 4px;" />
-            </a>
-            <!-- FIM DO BOTAO PAGBANK -->
-
-        </div>
-        """, unsafe_allow_html=True)
 
         with st.popover("⚡ Pagar R$ 199 no Pix Direto", use_container_width=True):
 
@@ -244,9 +219,10 @@ def render_paywall(user_email: str) -> None:
 
     # --- SEÇÃO DE RECUPERAÇÃO / DESBLOQUEIO DE ACESSO COM COMPROVANTE ---
     st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("🚨 **Já fez o pagamento no BTG Pactual e seu acesso não abriu? Desbloqueie aqui:**", expanded=True):
+    with st.expander("🚨 **Já realizou o pagamento e precisa de suporte ou liberação com comprovante? Clique aqui**", expanded=False):
         st.markdown(f"""
-        Se você concluiu o pagamento no BTG Pactual para a conta **{user_email}**, escolha uma das opções abaixo para ter seu acesso liberado imediatamente:
+        Se você concluiu o pagamento para a conta **{user_email}**, escolha uma das opções abaixo para ter seu acesso liberado imediatamente:
+
         """)
 
         tab_auto, tab_upload, tab_whatsapp = st.tabs([
