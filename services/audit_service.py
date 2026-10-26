@@ -33,8 +33,15 @@ def log_console(tipo, mensagem):
     elif tipo == "AUTH":
         cor = Cores.AZUL
 
-    # Print Terminal
-    print(f"{cor}[{timestamp}] [{tipo}] {mensagem}{Cores.RESET}")
+    # Print Terminal seguro para Windows (evita UnicodeEncodeError com emojis)
+    try:
+        print(f"{cor}[{timestamp}] [{tipo}] {mensagem}{Cores.RESET}")
+    except (UnicodeEncodeError, Exception):
+        try:
+            msg_safe = mensagem.encode("ascii", "replace").decode("ascii")
+            print(f"{cor}[{timestamp}] [{tipo}] {msg_safe}{Cores.RESET}")
+        except Exception:
+            pass
 
     # Salva no Banco
     try:
