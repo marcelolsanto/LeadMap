@@ -12,7 +12,7 @@ try:
     from duckduckgo_search import DDGS
 except ImportError:
     DDGS = None
-from services import enrichment_service
+from services import enrichment_service, sicaf_service
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -161,6 +161,27 @@ class WorkerR2D2(threading.Thread):
                                 self.callback(f"   E-mail Fiscal encontrado!")
                         else:
                             time.sleep(0.5)
+
+                        # Auditoria Complementar: SICAF / Compras.gov.br
+                        try:
+                            sicaf_info = sicaf_service.consultar_sicaf(cnpj_limpo)
+                            lead["SICAF_Ativo"] = sicaf_info.get("sicaf_ativo", False)
+                            lead["Habilitado_Licitar"] = sicaf_info.get("habilitado_licitar", False)
+                            lead["Porte_SICAF"] = sicaf_info.get("porte_sicaf", "Não cadastrado")
+                            if sicaf_info.get("sicaf_ativo"):
+                                self.stats["sicaf_encontrados"] = self.stats.get("sicaf_encontrados", 0) + 1
+                                if self.callback:
+                                    status_lic = "Habilitado a Licitar" if sicaf_info.get("habilitado_licitar") else "Cadastrado"
+                                    self.callback(f"   🏛️ SICAF: {status_lic} ({sicaf_info.get('porte_sicaf')})")
+                        except Exception as s_err:
+                            logger.debug(f"Falha ao consultar SICAF para {cnpj_limpo}: {s_err}")
+                            lead.setdefault("SICAF_Ativo", False)
+                            lead.setdefault("Habilitado_Licitar", False)
+                            lead.setdefault("Porte_SICAF", "Não cadastrado")
+                else:
+                    lead.setdefault("SICAF_Ativo", False)
+                    lead.setdefault("Habilitado_Licitar", False)
+                    lead.setdefault("Porte_SICAF", "Não cadastrado")
 
             except queue.Empty:
                 continue

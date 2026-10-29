@@ -29,8 +29,18 @@ def gerar_vcf_individual(row: dict) -> bytes:
         vcf += f"ADR;TYPE=WORK:;;{end};;;;\n"
     if site and site not in ('nan', 'None', 'Nao possui'):
         vcf += f"URL;TYPE=WORK:{site}\n"
+
+    sicaf = row.get('SICAF_Ativo') or row.get('sicaf_ativo')
+    licit = row.get('Habilitado_Licitar') or row.get('habilitado_licitar')
+    note_extra = ""
+    if sicaf in (True, 'True', 1, 'Sim'):
+        note_extra = " | Fornecedor SICAF (Habilitado)" if licit in (True, 'True', 1, 'Sim') else " | Fornecedor SICAF"
+
     if cnpj and cnpj not in ('nan', 'None'):
-        vcf += f"NOTE:CNPJ: {cnpj}\n"
+        vcf += f"NOTE:CNPJ: {cnpj}{note_extra}\n"
+    elif note_extra:
+        vcf += f"NOTE:{note_extra.lstrip(' | ')}\n"
+
     vcf += "END:VCARD\n"
     return vcf.encode('utf-8')
 

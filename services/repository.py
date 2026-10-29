@@ -55,7 +55,10 @@ def init_dbs():
             ("linkedin", "TEXT"),
             ("email_valido", "TEXT"),
             ("maps_url", "TEXT"),
-            ("razao_social", "TEXT")
+            ("razao_social", "TEXT"),
+            ("sicaf_ativo", "INTEGER"),
+            ("habilitado_licitar", "INTEGER"),
+            ("porte_sicaf", "TEXT")
         ]
         cursor.execute("PRAGMA table_info(leads);")
         colunas_existentes = [row[1] for row in cursor.fetchall()]
@@ -192,8 +195,9 @@ def salvar_lote_leads(lista_leads: list, nicho_atual: str) -> int:
             cursor.execute("""
                 INSERT OR IGNORE INTO leads
                 (empresa, email, telefone, site, endereco, cnpj, nicho, origem, data_captura, hash_unico,
-                 whatsapp, instagram, facebook, linkedin, email_valido, maps_url, razao_social)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 whatsapp, instagram, facebook, linkedin, email_valido, maps_url, razao_social,
+                 sicaf_ativo, habilitado_licitar, porte_sicaf)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 lead.get("Empresa"),
                 lead.get("Email") or lead.get("Melhor_Email"),
@@ -211,7 +215,10 @@ def salvar_lote_leads(lista_leads: list, nicho_atual: str) -> int:
                 lead.get("LinkedIn", ""),
                 lead.get("Email_Valido", ""),
                 lead.get("Google_Maps_Url", ""),
-                lead.get("Razao Social") or lead.get("Razão Social", "")
+                lead.get("Razao Social") or lead.get("Razão Social", ""),
+                1 if lead.get("SICAF_Ativo") else 0,
+                1 if lead.get("Habilitado_Licitar") else 0,
+                str(lead.get("Porte_SICAF") or "")
             ))
             if cursor.rowcount > 0:
                 count_novos += 1

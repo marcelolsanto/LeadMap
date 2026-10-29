@@ -55,7 +55,8 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
     # Reordenar colunas amigáveis
     colunas_ordem = [
         'Empresa', 'Telefone', 'Email', 'Site', 'Endereço', 'CNPJ',
-        'Razão Social', 'Razao Social', 'Instagram', 'Facebook', 'LinkedIn',
+        'Razão Social', 'Razao Social', 'SICAF_Ativo', 'Habilitado_Licitar', 'Porte_SICAF',
+        'Instagram', 'Facebook', 'LinkedIn',
         'Email_Valido', 'WhatsApp_Url', 'Google_Maps_Url', 'Tipo_Link'
     ]
     colunas_existentes = [c for c in colunas_ordem if c in df_display.columns]
@@ -70,8 +71,9 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
     com_whats = sum(1 for _, r in df_display.iterrows() if r.get('WhatsApp_Url') or (r.get('Telefone') and str(r.get('Telefone')).startswith('+55')))
     com_email = sum(1 for _, r in df_display.iterrows() if r.get('Email') and str(r.get('Email')) not in ('None', 'nan', ''))
     com_cnpj = sum(1 for _, r in df_display.iterrows() if r.get('CNPJ') and str(r.get('CNPJ')) not in ('None', 'nan', ''))
+    com_sicaf = sum(1 for _, r in df_display.iterrows() if r.get('SICAF_Ativo') in (True, 'True', 1, 'Sim') or r.get('sicaf_ativo') in (True, 'True', 1))
 
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3, m4, m5 = st.columns(5)
     with m1:
         st.metric("🏢 Total de Leads", total_leads)
     with m2:
@@ -80,6 +82,8 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
         st.metric("✉️ Com E-mail", com_email)
     with m4:
         st.metric("📄 Com CNPJ / Fiscal", com_cnpj)
+    with m5:
+        st.metric("🏛️ No SICAF / Gov", com_sicaf)
 
     st.write("")
 
@@ -189,6 +193,19 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
             site = str(lead_dict.get('Site') or '')
             if site in ('nan', 'None', 'Nao possui'): site = ''
 
+            # Badges SICAF e de Qualificação
+            sicaf_ativo = lead_dict.get('SICAF_Ativo') or lead_dict.get('sicaf_ativo')
+            habilitado_licitar = lead_dict.get('Habilitado_Licitar') or lead_dict.get('habilitado_licitar')
+            porte_sicaf = str(lead_dict.get('Porte_SICAF') or lead_dict.get('porte_sicaf') or '').strip()
+            if porte_sicaf in ('nan', 'None'): porte_sicaf = ''
+
+            badge_sicaf_html = ""
+            if sicaf_ativo in (True, 'True', 1, 'Sim'):
+                if habilitado_licitar in (True, 'True', 1, 'Sim'):
+                    badge_sicaf_html = "<span style='background-color:#EFF6FF; color:#1E40AF; border:1px solid #BFDBFE; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; text-decoration:none !important; white-space:nowrap;'>🏛️ Habilitado a Licitar (SICAF)</span>"
+                else:
+                    badge_sicaf_html = "<span style='background-color:#F8FAFC; color:#1E3A8A; border:1px solid #CBD5E1; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700; text-decoration:none !important; white-space:nowrap;'>🏛️ Fornecedor SICAF</span>"
+
             # Badge de qualificação do lead
             if email and whatsapp_url:
                 badge_lead_html = "<span style='background-color:#F0FDF4; color:#15803D; border:1px solid #BBF7D0; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; text-decoration:none !important; white-space:nowrap;'>✨ Contato Completo</span>"
@@ -266,7 +283,11 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
             cnpj_text = f"📄 <strong>CNPJ:</strong> {cnpj}" if cnpj else ""
             if razao and razao != nome:
                 cnpj_text += f" &nbsp;•&nbsp; <em>{razao}</em>"
+            if sicaf_ativo in (True, 'True', 1, 'Sim') and porte_sicaf and porte_sicaf != "Não cadastrado":
+                cnpj_text += f" &nbsp;•&nbsp; 🏛️ <em>SICAF: {porte_sicaf}</em>"
             cnpj_line = f"<div style='color:#64748B; font-size:0.84rem; margin-top:4px;'>{cnpj_text}</div>" if cnpj_text else ""
+
+            badges_header = f"<div style='display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end;'>{badge_sicaf_html}{badge_lead_html}</div>"
 
             # Card institucional completo
             card_html = f"""<div style="background-color:#FFFFFF; border-radius:12px; padding:20px 24px; margin-bottom:16px; border:1px solid #E2E8F0; border-left:5px solid #2563EB; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
@@ -275,7 +296,7 @@ def render_results(df, termo_final=None, creds=None, user_email=None, nicho_atua
 <h3 style="margin:0; color:#0F172A; font-size:1.18rem; font-weight:700; line-height:1.3;">🏢 {nome}</h3>
 {cnpj_line}
 </div>
-{badge_lead_html}
+{badges_header}
 </div>
 <div style="font-size:0.92rem; line-height:1.5;">
 {maps_row}
